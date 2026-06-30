@@ -1,0 +1,21 @@
+# Render Blueprint — deploys the whole thing in one go.
+# In Render: New + > Blueprint > pick this repo. Then fill in the two secrets.
+services:
+  - type: web
+    name: klomu-order-log
+    runtime: python
+    plan: starter            # ~$7/month, always on (no cold starts)
+    region: frankfurt        # closest to the UK; or "oregon"/"singapore"
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ANTHROPIC_API_KEY   # paste your key in the dashboard (kept secret)
+        sync: false
+      - key: WRITE_TOKEN         # the staff passcode for scanning/editing
+        sync: false
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: data               # SQLite lives here so it survives deploys
+      mountPath: /var/data
+      sizeGB: 1
