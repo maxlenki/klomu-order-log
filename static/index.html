@@ -562,6 +562,22 @@ function exportExcel(records){
   records.forEach(r=>r.items.forEach(it=>{all[it.name]=(all[it.name]||0)+Number(it.qty);}));
   const summary=[["Item","Total packs (all days)"],...Object.entries(all).sort((a,b)=>b[1]-a[1])];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),"Summary");
+
+  // "By kitchen, by day" — concatenated line items: one row per Date / Kitchen / Item with the day's total qty
+  const bd=[["Date","Kitchen","Item","Qty (full day)"]];
+  dates.forEach(date=>{
+    const day=records.filter(r=>r.dateISO===date);
+    const kitchens=Array.from(new Set(day.map(r=>r.kitchen))).sort();
+    kitchens.forEach(k=>{
+      const tally={};
+      day.filter(r=>r.kitchen===k).forEach(r=>r.items.forEach(it=>{tally[it.name]=(tally[it.name]||0)+Number(it.qty);}));
+      Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([name,qty],idx)=>{
+        bd.push([idx===0?fmtDate(date):"", idx===0?k:"", name, qty]);
+      });
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(bd),"By kitchen by day");
+
   dates.forEach(date=>{
     const day=records.filter(r=>r.dateISO===date);
     const kitchens=Array.from(new Set(day.map(r=>r.kitchen)));
@@ -599,4 +615,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
-
