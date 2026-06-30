@@ -1,1 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#191c1f" />
+<title>Klomu · Disposables Order Log</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#f4f1ea; --panel:#fff; --ink:#191c1f; --steel:#5b6670; --line:#d9d4c7;
+    --amber:#d98a1f; --amber-soft:#fbeccd; --go:#2f8f63; --alert:#c4452f; --alert-soft:#f6ddd6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+  #root{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  button{font-family:inherit}
+  input,select,textarea{font-family:inherit}
+  select{appearance:none;-webkit-appearance:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{animation:spin 1s linear infinite}
+  ::-webkit-scrollbar{width:0;height:0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ---------- theme ---------- */
+const C = {
+  paper:"#f4f1ea", panel:"#fff", ink:"#191c1f", steel:"#5b6670", line:"#d9d4c7",
+  amber:"#d98a1f", amberSoft:"#fbeccd", go:"#2f8f63", goSoft:"#dcefe4",
+  alert:"#c4452f", alertSoft:"#f6ddd6",
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const TOKEN_KEY = "klomu_token";
+const getToken = () => localStorage.getItem(TOKEN_KEY) || "";
+const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+
+/* ---------- tiny icons ---------- */
+const I = ({d, size=20, color="currentColor", fill="none", w=2}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
+       strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const IconCamera = (p)=> <I {...p} d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>} />;
+const IconScan  = (p)=> <I {...p} d={<><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12"/></>} />;
+const IconList  = (p)=> <I {...p} d={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} />;
+const IconAlert = (p)=> <I {...p} d={<><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
+const IconGear  = (p)=> <I {...p} d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />;
+const IconCheck = (p)=> <I {...p} d={<polyline points="20 6 9 17 4 12"/>} />;
+const IconPkg   = (p)=> <I {...p} d={<><path d="M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>} />;
+
+/* ---------- API ---------- */
+async function api(path, { method="GET", body, isForm=false } = {}) {
+  const headers = {};
+  const opts = { method, headers };
+  if (method !== "GET") headers["X-App-Token"] = getToken();
+  if (body && !isForm) { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  if (body && isForm) opts.body = body;
+  const res = await fetch(path, opts);
+  if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
+  if (!res.ok) {
+    let msg = "Something went wrong.";
+    try { msg = (await res.json()).detail || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/* ---------- image resize ---------- */
+function fileToDataUrl(file, maxDim=1100, quality=0.62){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error("Could not read the photo."));
+    reader.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error("Could not load the photo."));
+      img.onload=()=>{
+        let {width,height}=img; const s=Math.min(1,maxDim/Math.max(width,height));
+        width=Math.round(width*s); height=Math.round(height*s);
+        const cv=document.createElement("canvas"); cv.width=width; cv.height=height;
+        cv.getContext("2d").drawImage(img,0,0,width,height);
+        resolve(cv.toDataURL("image/jpeg",quality));
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+const dataUrlToBlob = (u) => fetch(u).then(r=>r.blob());
+
+/* ============================================================ */
+function App(){
+  const [tab,setTab]=useState("scan");
+  const [config,setConfig]=useState({kitchens:[],items:[]});
+  const [records,setRecords]=useState([]);
+  const [unsuccessful,setUnsuccessful]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+
+  const refresh = useCallback(async ()=>{
+    const [c,r,u]=await Promise.all([api("/api/config"),api("/api/records"),api("/api/unsuccessful")]);
+    setConfig(c); setRecords(r); setUnsuccessful(u); setLoaded(true);
+  },[]);
+  useEffect(()=>{ refresh().catch(()=>setLoaded(true)); },[refresh]);
+
+  const notConfigured = config.kitchens.length===0 || config.items.length===0;
+
+  if(!loaded) return <div style={{display:"flex",height:"100%",alignItems:"center",justifyContent:"center",color:C.steel}}><IconScan size={28} color={C.steel} className="spin"/></div>;
+
+  return (
+    <React.Fragment>
+      <Header records={records} unsuccessful={unsuccessful}/>
+      <div style={{flex:1,overflowY:"auto"}}>
+        {tab==="scan" && <ScanView config={config} notConfigured={notConfigured} onChanged={refresh} goSetup={()=>setTab("setup")}/>}
+        {tab==="day" && <DayView records={records}/>}
+        {tab==="checks" && <ChecksView unsuccessful={unsuccessful} config={config} onChanged={refresh}/>}
+        {tab==="setup" && <SetupView config={config} onChanged={refresh}/>}
+      </div>
+      <TabBar tab={tab} setTab={setTab} checkCount={unsuccessful.length}/>
+    </React.Fragment>
+  );
+}
+
+/* ---------- header ---------- */
+function Header({records,unsuccessful}){
+  const qty = records.reduce((s,r)=>s+r.items.reduce((a,i)=>a+(Number(i.qty)||0),0),0);
+  return (
+    <div style={{background:C.ink,color:C.paper,padding:"14px 18px 16px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:9}}>
+        <IconPkg size={18} color={C.amber}/>
+        <span className="mono" style={{fontSize:12,letterSpacing:2,color:C.amber}}>KLOMU · DISPOSABLES</span>
+      </div>
+      <div style={{display:"flex",gap:26,marginTop:12}}>
+        <Stat n={records.length} label="sheets logged"/>
+        <Stat n={qty} label="packs out"/>
+        <Stat n={unsuccessful.length} label="need checking" warn={unsuccessful.length>0}/>
+      </div>
+    </div>
+  );
+}
+const Stat=({n,label,warn})=>(
+  <div>
+    <div className="mono" style={{fontSize:26,fontWeight:700,lineHeight:1,color:warn?C.amber:C.paper}}>{n}</div>
+    <div style={{fontSize:10.5,letterSpacing:.4,color:"#9aa3ab",marginTop:4,textTransform:"uppercase"}}>{label}</div>
+  </div>
+);
+
+/* ---------- scan ---------- */
+function ScanView({config,notConfigured,onChanged,goSetup}){
+  const [stage,setStage]=useState("idle"); // idle reading review error
+  const [dataUrl,setDataUrl]=useState(null);
+  const [draft,setDraft]=useState(null);
+  const [err,setErr]=useState("");
+  const fileRef=useRef(null);
+  const reset=()=>{setStage("idle");setDataUrl(null);setDraft(null);setErr("");};
+
+  const onPick=async(e)=>{
+    const file=e.target.files?.[0]; e.target.value="";
+    if(!file) return;
+    if(!getToken()){ if(!promptPasscode()) return; }
+    setStage("reading"); setErr("");
+    try{
+      const url=await fileToDataUrl(file); setDataUrl(url);
+      const blob=await dataUrlToBlob(url);
+      const fd=new FormData(); fd.append("file",blob,"sheet.jpg");
+      const result=await api("/api/scan",{method:"POST",body:fd,isForm:true});
+      setDraft({
+        kitchen:result?.kitchen?.matched||"", kitchenRaw:result?.kitchen?.raw||"",
+        date:result?.date?.value||"", dateRaw:result?.date?.raw||"",
+        items:(result?.items||[]).map(it=>({id:uid(),name:it.matched||"",raw:it.raw||"",qty:Number(it.quantity)||0})),
+      });
+      setStage("review");
+    }catch(ex){
+      if(ex.code===401){ setStage("idle"); alert("That passcode wasn't right. Set it again in Setup."); return; }
+      setErr(ex.message||"Something went wrong."); setStage("error");
+    }
+  };
+
+  if(notConfigured) return (
+    <Empty icon={<IconGear size={30} color={C.steel}/>} title="Set up your lists first"
+      body="Add your kitchens and disposable items before scanning, so the reader knows what's valid."
+      action={<PrimaryBtn onClick={goSetup}>Go to Setup</PrimaryBtn>}/>
+  );
+
+  if(stage==="review"&&draft) return (
+    <ReviewCard draft={draft} setDraft={setDraft} dataUrl={dataUrl} config={config}
+      onDone={()=>{onChanged();reset();}} onCancel={reset}/>
+  );
+
+  return (
+    <div style={{padding:18}}>
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onPick} style={{display:"none"}}/>
+      <button onClick={()=>stage!=="reading"&&fileRef.current?.click()} disabled={stage==="reading"}
+        style={{width:"100%",aspectRatio:"4 / 3",borderRadius:16,border:`2px dashed ${C.amber}`,
+          background:stage==="reading"?C.amberSoft:C.panel,color:C.ink,cursor:"pointer",
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
+        {stage==="reading"?(
+          <React.Fragment>
+            <IconScan size={40} color={C.amber} className="spin"/>
+            <span className="mono" style={{fontSize:13,color:C.steel}}>Reading the sheet…</span>
+          </React.Fragment>
+        ):(
+          <React.Fragment>
+            <div style={{width:74,height:74,borderRadius:"50%",background:C.amber,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <IconCamera size={34} color="#fff"/>
+            </div>
+            <span style={{fontWeight:700,fontSize:17}}>Photograph an order sheet</span>
+            <span style={{fontSize:12.5,color:C.steel}}>Lay it flat, fill the frame, keep the date visible</span>
+          </React.Fragment>
+        )}
+      </button>
+
+      {stage==="error" && (
+        <div style={{marginTop:16,background:C.alertSoft,border:`1px solid ${C.alert}`,borderRadius:12,padding:14}}>
+          <div style={{display:"flex",gap:9,color:C.alert,fontWeight:700,fontSize:14,alignItems:"center"}}><IconAlert size={18} color={C.alert}/> Couldn't read that one</div>
+          <p style={{margin:"8px 0 12px",fontSize:13}}>{err}</p>
+          <div style={{display:"flex",gap:10}}>
+            <PrimaryBtn onClick={()=>fileRef.current?.click()}>Try again</PrimaryBtn>
+            {dataUrl && <GhostBtn onClick={async()=>{
+              await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason:"Reader could not parse the sheet",draft:null,image:dataUrl}});
+              onChanged(); reset();
+            }}>Send to Checks</GhostBtn>}
+          </div>
+        </div>
+      )}
+      <ProcessNote/>
+    </div>
+  );
+}
+
+function ProcessNote(){
+  const rows=[["1","Kitchen","matched to your list, or flagged for a check"],
+    ["2","Items","each line matched to the order book and tallied"],
+    ["3","Date","files the order under the right day; no date = check"]];
+  return (
+    <div style={{marginTop:22,borderTop:`1px solid ${C.line}`,paddingTop:16}}>
+      {rows.map(([n,t,d])=>(
+        <div key={n} style={{display:"flex",gap:12,marginBottom:12}}>
+          <div className="mono" style={{fontSize:13,fontWeight:700,color:C.amber,width:16}}>{n}</div>
+          <div><div style={{fontSize:13.5,fontWeight:700}}>{t}</div><div style={{fontSize:12.5,color:C.steel}}>{d}</div></div>
+        </div>
+      ))}
+      <p style={{fontSize:11.5,color:C.steel,marginTop:4}}>Every scan is shown to you before it's logged — these numbers feed the budget, so nothing is committed without a quick check.</p>
+    </div>
+  );
+}
+
+/* ---------- review card ---------- */
+function ReviewCard({draft,setDraft,dataUrl,config,onDone,onCancel}){
+  const [busy,setBusy]=useState(false);
+  const setField=(k,v)=>setDraft({...draft,[k]:v});
+  const setItem=(id,patch)=>setDraft({...draft,items:draft.items.map(i=>i.id===id?{...i,...patch}:i)});
+  const removeItem=(id)=>setDraft({...draft,items:draft.items.filter(i=>i.id!==id)});
+  const addItem=()=>setDraft({...draft,items:[...draft.items,{id:uid(),name:"",raw:"",qty:1}]});
+
+  const kitchenBad=!draft.kitchen, dateBad=!draft.date;
+  const itemBad=draft.items.some(i=>!i.name||!i.qty);
+  const blocking=kitchenBad||dateBad||itemBad||draft.items.length===0;
+
+  const commit=async()=>{
+    setBusy(true);
+    try{
+      await api("/api/records",{method:"POST",body:{
+        id:uid(),dateISO:draft.date,kitchen:draft.kitchen,
+        items:draft.items.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:Number(i.qty)})),
+        source:"scan",
+      }});
+      onDone();
+    }catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
+  };
+  const toChecks=async()=>{
+    setBusy(true);
+    const reason=[kitchenBad&&"kitchen not recognised",dateBad&&"no readable date",itemBad&&"unmatched items"].filter(Boolean).join(", ")||"sent for manual check";
+    try{
+      await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason,draft,image:dataUrl}});
+      onDone();
+    }catch(ex){ alert(ex.message); setBusy(false); }
+  };
+
+  return (
+    <div style={{padding:18}}>
+      <div style={{background:C.panel,borderRadius:14,border:`1px solid ${C.line}`,overflow:"hidden"}}>
+        <div style={{background:blocking?C.amber:C.go,color:"#fff",padding:"9px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span className="mono" style={{fontSize:12,letterSpacing:2,fontWeight:700}}>{blocking?"NEEDS A CHECK":"READY TO LOG"}</span>
+          {dataUrl && <img src={dataUrl} alt="" style={{height:30,borderRadius:4,border:"1px solid rgba(255,255,255,.5)"}}/>}
+        </div>
+        <div style={{padding:16}}>
+          <FieldRow label="Kitchen" bad={kitchenBad} hint={draft.kitchenRaw&&`read: "${draft.kitchenRaw}"`}>
+            <Select value={draft.kitchen} onChange={v=>setField("kitchen",v)} options={config.kitchens} placeholder="— not recognised —"/>
+          </FieldRow>
+          <FieldRow label="Date" bad={dateBad} hint={draft.dateRaw&&`read: "${draft.dateRaw}"`}>
+            <input type="date" value={draft.date} onChange={e=>setField("date",e.target.value)} style={{...inp,borderColor:dateBad?C.alert:C.line}}/>
+          </FieldRow>
+          <div style={{margin:"14px 0 6px",fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase",display:"flex",justifyContent:"space-between"}}><span>Items</span><span>Qty</span></div>
+          {draft.items.map(it=>(
+            <div key={it.id} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+              <div style={{flex:1}}>
+                <Select value={it.name} onChange={v=>setItem(it.id,{name:v})} options={config.items.map(i=>i.name)} placeholder="— unmatched item —" bad={!it.name}/>
+                {it.raw && it.name!==it.raw && <div className="mono" style={{fontSize:10.5,color:it.name?C.steel:C.alert,marginTop:2}}>read: "{it.raw}"</div>}
+              </div>
+              <input type="number" min="0" inputMode="numeric" value={it.qty} onChange={e=>setItem(it.id,{qty:Number(e.target.value)})} style={{...inp,width:58,textAlign:"center",padding:"9px 4px"}}/>
+              <button onClick={()=>removeItem(it.id)} style={iconBtn}>✕</button>
+            </div>
+          ))}
+          <button onClick={addItem} style={{...ghost,width:"100%",marginTop:4,fontSize:13}}>+ Add a line</button>
+        </div>
+      </div>
+
+      {blocking && <p style={{fontSize:12,color:C.amber,margin:"12px 2px 0",display:"flex",gap:7,alignItems:"flex-start"}}><IconAlert size={15} color={C.amber}/> Fix the highlighted fields to log this, or send the whole sheet to Checks.</p>}
+
+      <div style={{display:"flex",gap:10,marginTop:16}}>
+        <button onClick={commit} disabled={blocking||busy}
+          style={{...primary,flex:1,background:C.go,opacity:(blocking||busy)?.4:1,cursor:(blocking||busy)?"not-allowed":"pointer"}}>✓ Confirm &amp; log</button>
+        <button onClick={toChecks} disabled={busy} style={{...ghost,color:C.alert,borderColor:C.alert}}>To Checks</button>
+      </div>
+      <button onClick={onCancel} disabled={busy} style={txtBtn}>Discard this scan</button>
+    </div>
+  );
+}
+
+/* ---------- day / insights (public) ---------- */
+function DayView({records}){
+  const dates=Array.from(new Set(records.map(r=>r.dateISO).filter(Boolean))).sort().reverse();
+  const [sel,setSel]=useState("all");
+  const scoped=sel==="all"?records:records.filter(r=>r.dateISO===sel);
+  const itemT={},kitT={};
+  scoped.forEach(r=>r.items.forEach(it=>{itemT[it.name]=(itemT[it.name]||0)+Number(it.qty);kitT[r.kitchen]=(kitT[r.kitchen]||0)+Number(it.qty);}));
+  const itemRows=Object.entries(itemT).sort((a,b)=>b[1]-a[1]);
+  const kitRows=Object.entries(kitT).sort((a,b)=>b[1]-a[1]);
+  const total=itemRows.reduce((s,[,q])=>s+q,0);
+  const top=kitRows[0]?.[1]||1;
+
+  if(records.length===0) return <Empty icon={<IconList size={30} color={C.steel}/>} title="Nothing logged yet" body="Scanned sheets will be summarised here, grouped by their date."/>;
+
+  return (
+    <div style={{padding:18}}>
+      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:16}}>
+        <Chip active={sel==="all"} onClick={()=>setSel("all")}>All dates</Chip>
+        {dates.map(d=><Chip key={d} active={sel===d} onClick={()=>setSel(d)}>{fmtDate(d)}</Chip>)}
+      </div>
+      <div style={{display:"flex",gap:12,marginBottom:20}}>
+        <MiniStat n={scoped.length} label="sheets"/>
+        <MiniStat n={itemRows.length} label="distinct items"/>
+        <MiniStat n={total} label="total packs"/>
+      </div>
+      <SectionLabel>Top kitchens by volume</SectionLabel>
+      <div style={{marginBottom:22}}>
+        {kitRows.map(([k,q])=>(
+          <div key={k} style={{marginBottom:9}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}><span style={{fontWeight:600}}>{k}</span><span className="mono" style={{color:C.steel}}>{q}</span></div>
+            <div style={{height:7,background:C.line,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.max(4,(q/top)*100)}%`,background:C.amber}}/></div>
+          </div>
+        ))}
+      </div>
+      <SectionLabel>Items used</SectionLabel>
+      <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,overflow:"hidden",marginBottom:22}}>
+        {itemRows.map(([name,q],idx)=>(
+          <div key={name} style={{display:"flex",justifyContent:"space-between",padding:"11px 14px",borderBottom:idx<itemRows.length-1?`1px solid ${C.line}`:"none"}}>
+            <span style={{fontSize:13.5}}>{name}</span><span className="mono" style={{fontWeight:700}}>{q}</span>
+          </div>
+        ))}
+      </div>
+      <PrimaryBtn full onClick={()=>exportExcel(records)}>↓ Export Excel (tab per day)</PrimaryBtn>
+      <button onClick={()=>exportCsv(scoped)} style={txtBtn}>Download CSV of {sel==="all"?"all records":fmtDate(sel)}</button>
+    </div>
+  );
+}
+
+/* ---------- checks ---------- */
+function ChecksView({unsuccessful,config,onChanged}){
+  if(unsuccessful.length===0) return <Empty icon={<IconCheck size={30} color={C.go}/>} title="All clear" body="Sheets the reader wasn't sure about land here for a human to sort out. None right now."/>;
+  return <div style={{padding:18}}>{unsuccessful.map(u=><CheckCard key={u.id} entry={u} config={config} onChanged={onChanged}/>)}</div>;
+}
+function CheckCard({entry,config,onChanged}){
+  const [open,setOpen]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const seed=entry.draft||{};
+  const [d,setD]=useState({
+    kitchen:seed.kitchen||"", date:seed.date||todayISO(),
+    items:(seed.items||[{id:uid(),name:"",qty:1}]).map(i=>({id:uid(),name:i.name||"",qty:i.qty||1})),
+  });
+  const ready=d.kitchen&&d.date&&d.items.length&&d.items.every(i=>i.name&&i.qty>0);
+
+  const resolve=async()=>{
+    setBusy(true);
+    try{
+      await api("/api/records",{method:"POST",body:{id:uid(),dateISO:d.date,kitchen:d.kitchen,
+        items:d.items.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:Number(i.qty)})),source:"manual"}});
+      await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"});
+      onChanged();
+    }catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
+  };
+  const del=async()=>{
+    if(!confirm("Discard this check? The photo will be deleted too.")) return;
+    setBusy(true);
+    try{ await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"}); onChanged(); }
+    catch(ex){ alert(ex.message); setBusy(false); }
+  };
+
+  return (
+    <div style={{background:C.panel,border:`1px solid ${C.line}`,borderLeft:`4px solid ${C.alert}`,borderRadius:12,marginBottom:14,overflow:"hidden"}}>
+      <button onClick={()=>setOpen(!open)} style={{width:"100%",textAlign:"left",padding:"13px 15px",background:"none",border:"none",cursor:"pointer"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:13,fontWeight:700,color:C.alert,textTransform:"capitalize"}}>{entry.reason}</span>
+          <span className="mono" style={{fontSize:11,color:C.steel}}>{fmtTime(entry.scannedAt)}</span>
+        </div>
+        <span style={{fontSize:11.5,color:C.steel}}>{open?"Tap to collapse":"Tap to fix or review"}</span>
+      </button>
+      {open && (
+        <div style={{padding:"0 15px 15px"}}>
+          {entry.image && <img src={entry.image} alt="order sheet" style={{width:"100%",borderRadius:8,border:`1px solid ${C.line}`,marginBottom:14}}/>}
+          <FieldRow label="Kitchen" bad={!d.kitchen}><Select value={d.kitchen} onChange={v=>setD({...d,kitchen:v})} options={config.kitchens} placeholder="— choose kitchen —"/></FieldRow>
+          <FieldRow label="Date" bad={!d.date}><input type="date" value={d.date} onChange={e=>setD({...d,date:e.target.value})} style={inp}/></FieldRow>
+          <div style={{fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase",margin:"10px 0 6px",fontWeight:700}}>Items</div>
+          {d.items.map(it=>(
+            <div key={it.id} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+              <div style={{flex:1}}><Select value={it.name} onChange={v=>setD({...d,items:d.items.map(x=>x.id===it.id?{...x,name:v}:x)})} options={config.items.map(i=>i.name)} placeholder="— choose item —" bad={!it.name}/></div>
+              <input type="number" min="0" value={it.qty} onChange={e=>setD({...d,items:d.items.map(x=>x.id===it.id?{...x,qty:Number(e.target.value)}:x)})} style={{...inp,width:58,textAlign:"center"}}/>
+              <button onClick={()=>setD({...d,items:d.items.filter(x=>x.id!==it.id)})} style={iconBtn}>✕</button>
+            </div>
+          ))}
+          <button onClick={()=>setD({...d,items:[...d.items,{id:uid(),name:"",qty:1}]})} style={{...ghost,width:"100%",fontSize:13,marginTop:2}}>+ Add a line</button>
+          <div style={{display:"flex",gap:10,marginTop:14}}>
+            <button disabled={!ready||busy} onClick={resolve} style={{...primary,flex:1,background:C.go,opacity:(ready&&!busy)?1:.4,cursor:(ready&&!busy)?"pointer":"not-allowed"}}>✓ Log it</button>
+            <button disabled={busy} onClick={del} style={{...ghost,color:C.alert,borderColor:C.alert}}>Delete</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- setup ---------- */
+function SetupView({config,onChanged}){
+  const [kitchens,setKitchens]=useState(config.kitchens.join("\n"));
+  const [items,setItems]=useState(config.items.map(i=>i.name).join("\n"));
+  const [pass,setPass]=useState(getToken());
+  const [saved,setSaved]=useState(false);
+  const [busy,setBusy]=useState(false);
+
+  const dedupe=t=>Array.from(new Set(t.split("\n").map(s=>s.trim()).filter(Boolean)));
+  const save=async()=>{
+    setToken(pass.trim());
+    setBusy(true);
+    try{
+      await api("/api/config",{method:"PUT",body:{kitchens:dedupe(kitchens),items:dedupe(items).map(name=>({name}))}});
+      setSaved(true); setTimeout(()=>setSaved(false),1800); onChanged();
+    }catch(ex){ alert(ex.code===401?"That passcode wasn't accepted by the server.":ex.message); }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{padding:18}}>
+      <Label>Staff passcode</Label>
+      <p style={{fontSize:12.5,color:C.steel,margin:"0 0 7px"}}>Needed to scan, log, or edit. Viewers see the insights without it. Ask whoever set up the server for the code.</p>
+      <input type="text" value={pass} onChange={e=>setPass(e.target.value)} placeholder="passcode" style={inp} autoCapitalize="off" autoCorrect="off"/>
+
+      <Label style={{marginTop:18}}>Kitchens</Label>
+      <textarea value={kitchens} onChange={e=>setKitchens(e.target.value)} placeholder={"Centre Court Kitchen\nPlayers' Lounge\nMedia Centre"} rows={6} style={ta}/>
+      <Count n={dedupe(kitchens).length} word="kitchen"/>
+
+      <Label style={{marginTop:18}}>Disposable items</Label>
+      <p style={{fontSize:12.5,color:C.steel,margin:"0 0 7px"}}>One per line. Bake the pack size into the name (e.g. "Napkins (case of 2000)") so the count logged is the number of packs.</p>
+      <textarea value={items} onChange={e=>setItems(e.target.value)} placeholder={"Paper plates 9in (case of 1000)\nWhite napkins (pack of 500)\nWooden forks (box of 1000)\nClear cups 12oz (sleeve of 50)\nFlat lids 12oz (sleeve of 50)\nBin bags heavy duty (roll of 200)"} rows={9} style={ta}/>
+      <Count n={dedupe(items).length} word="item"/>
+
+      <button onClick={save} disabled={busy} style={{...primary,width:"100%",marginTop:18,background:saved?C.go:C.amber}}>{saved?"✓ Saved":"Save"}</button>
+    </div>
+  );
+}
+
+/* ---------- tab bar ---------- */
+function TabBar({tab,setTab,checkCount}){
+  const tabs=[["scan","Scan",IconScan],["day","Day",IconList],["checks","Checks",IconAlert],["setup","Setup",IconGear]];
+  return (
+    <div style={{display:"flex",borderTop:`1px solid ${C.line}`,background:C.panel,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {tabs.map(([id,label,Icon])=>{
+        const active=tab===id;
+        return (
+          <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px 0 11px",background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,color:active?C.ink:C.steel}}>
+            <div style={{position:"relative"}}>
+              <Icon size={21} color={active?C.amber:C.steel}/>
+              {id==="checks"&&checkCount>0 && <span style={{position:"absolute",top:-6,right:-9,background:C.alert,color:"#fff",borderRadius:9,minWidth:16,height:16,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{checkCount}</span>}
+            </div>
+            <span style={{fontSize:11,fontWeight:active?700:500}}>{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- shared bits ---------- */
+function Empty({icon,title,body,action}){
+  return (
+    <div style={{padding:"60px 30px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+      <div style={{width:64,height:64,borderRadius:"50%",background:C.panel,border:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{icon}</div>
+      <h3 style={{margin:0,fontSize:17}}>{title}</h3>
+      <p style={{margin:0,fontSize:13.5,color:C.steel,maxWidth:280,lineHeight:1.5}}>{body}</p>
+      {action&&<div style={{marginTop:6}}>{action}</div>}
+    </div>
+  );
+}
+const PrimaryBtn=({children,onClick,full,style})=>(<button onClick={onClick} style={{...primary,width:full?"100%":"auto",...style}}>{children}</button>);
+const GhostBtn=({children,onClick,style})=>(<button onClick={onClick} style={{...ghost,...style}}>{children}</button>);
+function FieldRow({label,bad,hint,children}){
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
+        <span style={{fontSize:11,letterSpacing:1,color:bad?C.alert:C.steel,textTransform:"uppercase",fontWeight:700}}>{label}</span>
+        {hint&&<span className="mono" style={{fontSize:10.5,color:C.steel}}>{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+function Select({value,onChange,options,placeholder,bad}){
+  return (
+    <div style={{position:"relative"}}>
+      <select value={value} onChange={e=>onChange(e.target.value)}
+        style={{...inp,paddingRight:30,borderColor:(bad||!value)?C.alert:C.line,color:value?C.ink:C.alert,fontWeight:value?600:500}}>
+        <option value="">{placeholder}</option>
+        {options.map(o=><option key={o} value={o}>{o}</option>)}
+      </select>
+      <span style={{position:"absolute",right:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:C.steel,fontSize:11}}>▼</span>
+    </div>
+  );
+}
+const Chip=({active,onClick,children})=>(<button onClick={onClick} className="mono" style={{flexShrink:0,padding:"7px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,cursor:"pointer",border:`1px solid ${active?C.ink:C.line}`,background:active?C.ink:C.panel,color:active?C.paper:C.steel}}>{children}</button>);
+const MiniStat=({n,label})=>(<div style={{flex:1,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"12px 10px"}}><div className="mono" style={{fontSize:22,fontWeight:700}}>{n}</div><div style={{fontSize:10.5,color:C.steel,textTransform:"uppercase",letterSpacing:.4,marginTop:2}}>{label}</div></div>);
+const SectionLabel=({children})=>(<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12.5,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:11}}><span style={{color:C.amber}}>▸</span>{children}</div>);
+const Label=({children,style})=>(<div style={{fontSize:11.5,letterSpacing:1,textTransform:"uppercase",fontWeight:700,marginBottom:7,...style}}>{children}</div>);
+const Count=({n,word})=>(<div className="mono" style={{fontSize:11.5,color:C.steel,marginTop:6}}>{n} {word}{n===1?"":"s"}</div>);
+
+function promptPasscode(){
+  const t=prompt("Enter the staff passcode to scan and log:");
+  if(t){ setToken(t.trim()); return true; }
+  return false;
+}
+
+/* ---------- export ---------- */
+function exportExcel(records){
+  const wb=XLSX.utils.book_new();
+  const dates=Array.from(new Set(records.map(r=>r.dateISO).filter(Boolean))).sort();
+  const all={};
+  records.forEach(r=>r.items.forEach(it=>{all[it.name]=(all[it.name]||0)+Number(it.qty);}));
+  const summary=[["Item","Total packs (all days)"],...Object.entries(all).sort((a,b)=>b[1]-a[1])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),"Summary");
+  dates.forEach(date=>{
+    const day=records.filter(r=>r.dateISO===date);
+    const kitchens=Array.from(new Set(day.map(r=>r.kitchen)));
+    const items=Array.from(new Set(day.flatMap(r=>r.items.map(i=>i.name))));
+    const grid={};
+    day.forEach(r=>r.items.forEach(it=>{grid[it.name]=grid[it.name]||{};grid[it.name][r.kitchen]=(grid[it.name][r.kitchen]||0)+Number(it.qty);}));
+    const header=["Item",...kitchens,"Total"];
+    const rows=items.map(n=>{const cells=kitchens.map(k=>grid[n]?.[k]||0);return [n,...cells,cells.reduce((a,b)=>a+b,0)];});
+    const totalRow=["TOTAL",...kitchens.map(k=>items.reduce((s,n)=>s+(grid[n]?.[k]||0),0)),""];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([header,...rows,totalRow]),safeName(date));
+  });
+  if(dates.length===0) XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["No dated records yet"]]),"Empty");
+  XLSX.writeFile(wb,`klomu-order-log-${todayISO()}.xlsx`);
+}
+function exportCsv(records){
+  const rows=[["Date","Kitchen","Item","Quantity","Source","Logged at"]];
+  records.forEach(r=>r.items.forEach(it=>rows.push([r.dateISO,r.kitchen,it.name,it.qty,r.source,r.scannedAt])));
+  const csv=rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=`klomu-order-log-${todayISO()}.csv`; a.click();
+}
+
+/* ---------- utils + styles ---------- */
+const safeName=s=>s.replace(/[\\/?*[\]:]/g,"-").slice(0,31);
+const fmtDate=iso=>{try{return new Date(iso+"T00:00:00").toLocaleDateString(undefined,{day:"2-digit",month:"short"});}catch{return iso;}};
+const fmtTime=iso=>{try{return new Date(iso).toLocaleString(undefined,{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"short"});}catch{return"";}};
+const inp={width:"100%",padding:"10px 12px",borderRadius:9,border:`1px solid ${C.line}`,background:"#fff",color:C.ink,fontSize:14.5,outline:"none"};
+const ta={...inp,resize:"vertical",lineHeight:1.6,fontFamily:"ui-monospace,Menlo,monospace",fontSize:13.5};
+const primary={display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px 18px",borderRadius:11,border:"none",background:C.amber,color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer"};
+const ghost={display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,padding:"11px 15px",borderRadius:11,border:`1px solid ${C.line}`,background:"#fff",color:C.ink,fontSize:14,fontWeight:600,cursor:"pointer"};
+const txtBtn={width:"100%",background:"none",border:"none",color:C.steel,fontSize:13,cursor:"pointer",textDecoration:"underline",padding:8,marginTop:12};
+const iconBtn={background:"none",border:"none",cursor:"pointer",padding:6,color:C.steel,fontSize:15,flexShrink:0};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
 
