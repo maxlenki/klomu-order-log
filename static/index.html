@@ -8,6 +8,14 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+  /* Force the classic JSX runtime so Babel outputs React.createElement.
+     The automatic runtime injects `import ... from "react/jsx-runtime"`,
+     which a plain browser (no bundler) refuses to run. */
+  Babel.registerPreset("react-classic", {
+    presets: [[Babel.availablePresets["react"], { runtime: "classic" }]],
+  });
+</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -30,7 +38,7 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
+<script type="text/babel" data-presets="react-classic">
 const { useState, useEffect, useRef, useCallback } = React;
 
 /* ---------- theme ---------- */
