@@ -9,9 +9,6 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script>
-  /* Force the classic JSX runtime so Babel outputs React.createElement.
-     The automatic runtime injects `import ... from "react/jsx-runtime"`,
-     which a plain browser (no bundler) refuses to run. */
   Babel.registerPreset("react-classic", {
     presets: [[Babel.availablePresets["react"], { runtime: "classic" }]],
   });
@@ -41,7 +38,9 @@
 <script type="text/babel" data-presets="react-classic">
 const { useState, useEffect, useRef, useCallback } = React;
 
-/* ---------- theme ---------- */
+/* ==== Championship catalogue (locations + items with pack size + price) ==== */
+const SEED = {"kitchens":["THE HILL LARDER","WALLED GARDEN","AORANGI PAVILLION","MEDIA","LTA ADVANTAGE LOUNGE","CAVENDISH","PARKSIDE FOOD MARKET","PICNIC PICK UP","NO1 DEBS","NO.1 BAR","LTA PRESIDENTS SUITE","NO.1 STAFF REST/PRODUCTION","OFFICIALS BUTTERY","STELLA ON THE HILL","PIMMS ON THE HILL","RENSHAW","KITCHEN 1 - SUITE 1","KITCHEN 2 - SUITES 2 & 3","KITCHEN 3 - SUITES 4 & 5 & 6","KITCHEN 4 - SUITES 7 & 8","KITCHEN 5 - SUITES 9 & 10"],"items":[{"code":"ECPS42","name":"Staff Dessert Plate","u":500,"p":17.08,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"ECPS44","name":"Staff Main Plate","u":500,"p":32.02,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"ECPS45","name":"Staff Bowl","u":500,"p":17.16,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"E03288","name":"Square Plate for Hampers","u":25,"p":27.94,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 25"},{"code":"G07841","name":"Small Tray Kraft","u":500,"p":49.62,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"G07838","name":"Large Open Kraft Tray","u":340,"p":34.96,"cat":"TAKEAWAY CONTAINERS","pack":"1x340"},{"code":"G07746","name":"Food Takeaway Sealed Box","u":180,"p":70.48,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 180"},{"code":"G06648","name":"Huhtamaki Box","u":270,"p":69.47,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 270"},{"code":"G07807","name":"Small 12oz Salad Bowl","u":300,"p":63.41,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 300"},{"code":"G07808","name":"Large 24oz Salad Bowl","u":300,"p":69.34,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 300"},{"code":"H07713","name":"Generic Salad Bowl Lid","u":300,"p":37.63,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 300"},{"code":"GWIM19","name":"Strawberry Box","u":500,"p":162.09,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"GWIM10","name":"10\" Pizza Box","u":100,"p":26.17,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 100"},{"code":"GWIM11","name":"14\" Pizza Box","u":50,"p":52.4,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 50"},{"code":"BCPS33","name":"Cup Carrier (1 x 180)","u":180,"p":25.19,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 180"},{"code":"BCPS32","name":"Cup Carrier (1 x 420)","u":420,"p":28.3,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 420"},{"code":"H07715","name":"1oz Pot","u":5000,"p":57.99,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 5000"},{"code":"H07513","name":"1oz Lid","u":5000,"p":28.84,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 5000"},{"code":"G07776","name":"2oz Pot","u":1500,"p":74.58,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1500"},{"code":"G07619","name":"2oz Pot Lid","u":1500,"p":52.34,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1500"},{"code":"BWIM03","name":"Plain Ice Cream Tub White","u":1000,"p":92.07,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1000"},{"code":"H07452","name":"Clear Plastic Pot - Salad & Eton","u":1200,"p":66.22,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1200"},{"code":"H07158","name":"Clear Plastic Pot - LID","u":1200,"p":57.88,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1200"},{"code":"JWIM01","name":"Burger Wraps/Foils","u":3000,"p":88.43,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 3000"},{"code":"BWIM13","name":"Large Pine Wood Cup","u":2000,"p":155.56,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 2000"},{"code":"EWIM02","name":"Pine Wood Cup for KP only","u":1000,"p":163.91,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1000"},{"code":"B05764","name":"12oz Soup Pot","u":500,"p":59.91,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"B05765","name":"12oz Soup Lid","u":500,"p":62.01,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 500"},{"code":"BWIM11","name":"1300ml Fusion Bowl","u":300,"p":51.45,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 300"},{"code":"BWIM12","name":"Fusion Bowl Lid","u":300,"p":29.14,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 300"},{"code":"B05769","name":"750ml Bowl","u":300,"p":90.59,"cat":"TAKEAWAY CONTAINERS","pack":"1x300"},{"code":"FWIM02","name":"Anchovy Tins","u":100,"p":107.83,"cat":"TAKEAWAY CONTAINERS","pack":"1x100"},{"code":"G07171","name":"Chip Bag","u":1000,"p":15.37,"cat":"TAKEAWAY CONTAINERS","pack":"1 x 1000"},{"code":"EWIM12","name":"Wooden Knife","u":500,"p":22.24,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 500"},{"code":"EWIM11","name":"Wooden Fork","u":500,"p":20.73,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 500"},{"code":"EWIM13","name":"Wooden Spoon","u":500,"p":23.45,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 500"},{"code":"E03449","name":"Ice Cream Spoon","u":1000,"p":25.65,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 1000"},{"code":"E03810","name":"6in1 Service Pack","u":250,"p":61.46,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 250"},{"code":"E03864","name":"Chopsticks","u":1000,"p":44.1,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 1000"},{"code":"E03885","name":"Coffee Stirrer","u":1000,"p":3.77,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 1000"},{"code":"EWIM14","name":"Tennis Ball Skewer - 100mm","u":1000,"p":47.99,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 1000"},{"code":"E03803","name":"9\" Skewer (Lobster Skewers)","u":1000,"p":11.46,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 1000"},{"code":"Pimms","name":"Red and White Straws","u":250,"p":0.0,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 250"},{"code":"B05890","name":"Smoothie and Slushy","u":200,"p":4.85,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 200"},{"code":"PS109","name":"Purple Straws","u":250,"p":0.0,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 250"},{"code":"E03883","name":"Cocktail Sticks","u":1000,"p":3.13,"cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS","pack":"1 x 1000"},{"code":"D10611","name":"Public Napkin Medium","u":2000,"p":22.29,"cat":"NAPKINS","pack":"1 x 2000"},{"code":"D10418","name":"Cocktail Napkin Small","u":2400,"p":34.73,"cat":"NAPKINS","pack":"1 x 2400"},{"code":"DWIM01","name":"Stripe Napkin Hospitality","u":1800,"p":41.86,"cat":"NAPKINS","pack":"1 x 1800"},{"code":"DWIM02","name":"Day to Day","u":1200,"p":29.78,"cat":"NAPKINS","pack":"1 x 1200"},{"code":"DWIM03","name":"Members/Obligatory Logo Napkin","u":1200,"p":54.19,"cat":"NAPKINS","pack":"1 x 1200"},{"code":"G02332","name":"Large Silicone White Paper","u":480,"p":43.54,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 480"},{"code":"GWIM08","name":"Small Square Brown Paper","u":1000,"p":26.68,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 1000"},{"code":"GWIM06","name":"10'' Pizza G/Proof Lining","u":1000,"p":44.75,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 1000"},{"code":"GWIM07","name":"14'' Pizza G/Proof Lining","u":1000,"p":83.98,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1x1000"},{"code":"GWIM16","name":"Treehouse Greaseproof","u":1000,"p":110.22,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1x1000"},{"code":"GWIM05","name":"Food Box Parchment","u":1000,"p":32.46,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1x1000"},{"code":"G06939","name":"Natural Baking Parchment","u":75,"p":8.09,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 75M"},{"code":"H00016","name":"Large Cling Film","u":300,"p":7.71,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 300M"},{"code":"J01032","name":"Foil","u":75,"p":9.34,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 75M"},{"code":"G07361","name":"Sausage and Pastie Bag","u":1000,"p":20.3,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 1000"},{"code":"G07731","name":"Medium Brown Bag","u":250,"p":24.88,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 250"},{"code":"P09725","name":"Bin Bags","u":100,"p":12.41,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 100"},{"code":"H01674","name":"Clear Pallet Wrap","u":300,"p":11.39,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 300M"},{"code":"H03620","name":"Black Pallet Wrap","u":200,"p":16.68,"cat":"FILM, WRAP & REFUSE SACKS","pack":"1 x 200M"},{"code":"J02328","name":"1/2 Size Deep Foil Trays","u":100,"p":32.66,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 100"},{"code":"J00936","name":"1/2 Size Deep Foil Tray Lid","u":100,"p":14.38,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 100"},{"code":"J02323","name":"Full Size Foil Trays","u":50,"p":68.49,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 50"},{"code":"J02324","name":"Full Size Foil Lids","u":50,"p":36.95,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 50"},{"code":"C02254","name":"Piping Bags Roll x 100","u":100,"p":11.13,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 100"},{"code":"P10080","name":"Blue Hair Net","u":144,"p":13.54,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 144"},{"code":"P10269","name":"White Skull Cap","u":50,"p":6.95,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 50"},{"code":"H07070","name":"200x250mm Vacuum Pouch","u":1000,"p":30.48,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 1000"},{"code":"H04885","name":"300x350mm Vacuum Pouch","u":500,"p":79.42,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 500"},{"code":"H04984","name":"350x450mm Vacuum Pouch","u":500,"p":84.18,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 500"},{"code":"P09937","name":"Disposable Apron","u":100,"p":3.41,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 100"},{"code":"G01659","name":"Lemon Wraps - Royal Room","u":1000,"p":160.81,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 1000"},{"code":"G07538","name":"Chefs Muslin Roll","u":1,"p":116.56,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 1"},{"code":"F12618","name":"4 Ltr Ice Cream Container","u":22,"p":38.27,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 22"},{"code":"F12617","name":"2 Ltr Ice Cream Container","u":30,"p":14.74,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 30"},{"code":"F12598","name":"2/4 Ltr Ice Cream Container Lid","u":95,"p":43.2,"cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS","pack":"1 x 95"},{"code":"B01391","name":"10 Litre Coffee Filters","u":250,"p":24.0,"cat":"FILTERS","pack":"1 x 250"},{"code":"B01246","name":"20 Litre Coffee Filters","u":250,"p":41.55,"cat":"FILTERS","pack":"1 x 250"},{"code":"B03292","name":"40 Litre Coffee Filters","u":250,"p":71.1,"cat":"FILTERS","pack":"1 x 250"},{"code":"C01955","name":"Pour and Serve Filters","u":250,"p":6.29,"cat":"FILTERS","pack":"1 x 250"},{"code":"M02613","name":"Blue Roll","u":150,"p":31.22,"cat":"CLEANING","pack":"6 x 150M"},{"code":"M02678","name":"Portable Blue Roll Dispenser","u":1,"p":33.1,"cat":"CLEANING","pack":"1 x 1"},{"code":"P03243","name":"Green Scourers","u":10,"p":3.42,"cat":"CLEANING","pack":"1 x 10"},{"code":"P10505","name":"Green Jay Cloths","u":50,"p":3.89,"cat":"CLEANING","pack":"1 x 50"},{"code":"P10508","name":"Blue Jay Cloths","u":25,"p":4.16,"cat":"CLEANING","pack":"1 x 25"},{"code":"P10510","name":"Red Jay Cloths","u":25,"p":4.16,"cat":"CLEANING","pack":"1 x 25"},{"code":"P10512","name":"Yellow Jay Cloths","u":25,"p":4.16,"cat":"CLEANING","pack":"1 x 25"},{"code":"P10540","name":"Blue Gloves Medium","u":100,"p":6.17,"cat":"CLEANING","pack":"1 x 100"},{"code":"P10541","name":"Blue Gloves Large","u":100,"p":6.17,"cat":"CLEANING","pack":"1 x 100"},{"code":"P10542","name":"Blue XL Gloves","u":100,"p":6.17,"cat":"CLEANING","pack":"1 x 100"},{"code":"P03151","name":"Washing Up Gloves Large","u":12,"p":8.83,"cat":"CLEANING","pack":"1 x 12PR"},{"code":"P03150","name":"Washing Up Yellow Gloves Medium","u":12,"p":8.83,"cat":"CLEANING","pack":"1 x 12PR"},{"code":"P10137","name":"Black Gauntlet Gloves","u":1,"p":11.19,"cat":"CLEANING","pack":"1 x 1"},{"code":"P03234","name":"Broom Head","u":1,"p":5.17,"cat":"CLEANING","pack":"1 x 1"},{"code":"P05402","name":"Mop Head","u":1,"p":3.84,"cat":"CLEANING","pack":"1 x 1"},{"code":"P10614","name":"Kentucky Mop Head","u":1,"p":3.49,"cat":"CLEANING","pack":"1 x 1"},{"code":"P05455","name":"Mop / Brush Handle","u":1,"p":3.35,"cat":"CLEANING","pack":"1 x 1"},{"code":"P04076","name":"Squeegee","u":1,"p":4.27,"cat":"CLEANING","pack":"1 x 1"},{"code":"P03329","name":"Squeegee Handle","u":1,"p":3.27,"cat":"CLEANING","pack":"1 x 1"},{"code":"P05386","name":"Blue Bucket and Wringer","u":1,"p":34.95,"cat":"CLEANING","pack":"1 x 1"},{"code":"P03022","name":"Dustpan and Brush","u":1,"p":3.85,"cat":"CLEANING","pack":"1 x 1"},{"code":"P10082","name":"Wet Floor Sign","u":1,"p":6.49,"cat":"CLEANING","pack":"1 x 1"},{"code":"N04619","name":"Oasis Pro 20 Spray Bottle","u":650,"p":16.01,"cat":"CLEANING","pack":"6 x 650ml"},{"code":"P10381","name":"Trigger for Spray Bottles (12 x 650ml) [P10381]","u":650,"p":13.88,"cat":"CLEANING","pack":"12 x 650ml"},{"code":"P09343","name":"EL10 Spray Bottles","u":650,"p":11.91,"cat":"CLEANING","pack":"6 x 650ml"},{"code":"P06715","name":"Pelican Pump - Aseptopol","u":1,"p":7.09,"cat":"CLEANING","pack":"1 x 1"},{"code":"P09354","name":"Trigger for Spray Bottles (12 x 650ml) [P09354]","u":650,"p":9.27,"cat":"CLEANING","pack":"12 x 650ml"},{"code":"P06926","name":"Small Green First Aid Box (10p)","u":1,"p":7.92,"cat":"FIRST AID","pack":"1 x 1"},{"code":"P06927","name":"Medium Green First Aid Box (20p)","u":1,"p":17.33,"cat":"FIRST AID","pack":"1 x 1"},{"code":"P06928","name":"Large Green First Aid Box (50p)","u":1,"p":17.33,"cat":"FIRST AID","pack":"1 x 1"},{"code":"P09839","name":"Blue Plasters","u":150,"p":4.8,"cat":"FIRST AID","pack":"1 x 150"},{"code":"P10691","name":"Face Mask","u":20,"p":27.73,"cat":"FIRST AID","pack":"1 x 20"},{"code":"P10689","name":"Goggles","u":1,"p":6.2,"cat":"FIRST AID","pack":"1 x 1"},{"code":"N04863","name":"Solid Dishwasher Detergent","u":4,"p":155.74,"cat":"CHEMICAL","pack":"4 x 4.5kg"},{"code":"N05016","name":"Liquid Dishwasher Detergent","u":5,"p":42.66,"cat":"CHEMICAL","pack":"2 x 5L"},{"code":"N04883","name":"Rinse Aid 5 Litre","u":5,"p":69.63,"cat":"CHEMICAL","pack":"2 x 5L"},{"code":"N04969","name":"Rinse Aid 20 Litre","u":20,"p":78.85,"cat":"CHEMICAL","pack":"1 x 20kg"},{"code":"N00615","name":"Glasswasher Detergent","u":5,"p":110.64,"cat":"CHEMICAL","pack":"4 x 5L"},{"code":"N00616","name":"Glasswasher Rinse Aid","u":5,"p":90.93,"cat":"CHEMICAL","pack":"4 x 5L"},{"code":"N04869","name":"Degreaser/Floor Cleaner","u":5,"p":44.95,"cat":"CHEMICAL","pack":"2 x 5L"},{"code":"N04808","name":"Sanitiser","u":2,"p":86.52,"cat":"CHEMICAL","pack":"2 x 2L"},{"code":"N05026","name":"Washing Up Liquid/Sanitiser","u":5,"p":63.08,"cat":"CHEMICAL","pack":"2 x 5L"},{"code":"N04882","name":"Oven Cleaner","u":750,"p":55.02,"cat":"CHEMICAL","pack":"6 x 750ml"},{"code":"N04429","name":"Granular Salt","u":10,"p":7.22,"cat":"CHEMICAL","pack":"1x10kg"},{"code":"N04405","name":"Dishwasher Salt Tablets","u":25,"p":15.42,"cat":"CHEMICAL","pack":"1 x 25kg"},{"code":"N04724","name":"Coffee De-Stainer","u":2,"p":91.26,"cat":"CHEMICAL","pack":"6 x 2.4kg"},{"code":"PCPSJ1","name":"Probe Wipes","u":150,"p":51.69,"cat":"CHEMICAL","pack":"6 x 150"},{"code":"N04792","name":"Hand Cream","u":500,"p":96.96,"cat":"CHEMICAL","pack":"6 x 500ml"},{"code":"N05056","name":"Hand Soap","u":500,"p":39.29,"cat":"CHEMICAL","pack":"6 x 500ml"},{"code":"N05075","name":"Hand Sanitiser","u":500,"p":103.48,"cat":"CHEMICAL","pack":"12 x 500ml"},{"code":"Hartnolls","name":"Convotherm Cleaner","u":1,"p":131.42,"cat":"CHEMICAL","pack":"Direct"},{"code":"Hartnolls","name":"Convotherm Rinse","u":1,"p":107.42,"cat":"CHEMICAL","pack":"Direct"},{"code":"Eversys","name":"Eversys Cleaning Balls","u":62,"p":33.12,"cat":"CHEMICAL","pack":"1x62"},{"code":"Eversys","name":"Eversys Milk Cleaning Fluid 1Ltr","u":1,"p":20.42,"cat":"CHEMICAL","pack":"1x1ltr"},{"code":"Franke","name":"Franke Cleaning Tablets","u":1,"p":38.0,"cat":"CHEMICAL","pack":"Direct"},{"code":"Franke","name":"Franke Milk Cleaner Fluid","u":1,"p":12.95,"cat":"CHEMICAL","pack":"Direct"},{"code":"Franke","name":"Franke Foam Master Milk Cleaner","u":1,"p":16.1,"cat":"CHEMICAL","pack":"Direct"},{"code":"N04389","name":"Oven Cleaner for Rational Ovens (1 x 100)","u":100,"p":80.75,"cat":"CHEMICAL","pack":"1 x 100"},{"code":"N04390","name":"Oven Rinse for Rational Ovens","u":100,"p":48.06,"cat":"CHEMICAL","pack":"1 x 100"},{"code":"N08557","name":"Oven Cleaner for Rational Ovens (1 x 150)","u":150,"p":113.18,"cat":"CHEMICAL","pack":"1 x 150"},{"code":"Linney","name":"Food Date Labels","u":1,"p":13.16,"cat":"LABELS","pack":"1 x 1"},{"code":"Linney","name":"Blue Temperature Labels","u":1,"p":6.23,"cat":"LABELS","pack":"1 x 1"}]};
+
 const C = {
   paper:"#f4f1ea", panel:"#fff", ink:"#191c1f", steel:"#5b6670", line:"#d9d4c7",
   amber:"#d98a1f", amberSoft:"#fbeccd", go:"#2f8f63", goSoft:"#dcefe4",
@@ -52,6 +51,16 @@ const todayISO = () => new Date().toISOString().slice(0,10);
 const TOKEN_KEY = "klomu_token";
 const getToken = () => localStorage.getItem(TOKEN_KEY) || "";
 const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+const gbp = (n) => "£" + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* value maths for a logged line, given the catalogue item */
+function lineMaths(item, unit, qty){
+  const u = (item && item.u) || 1;         // pieces per box
+  const p = (item && item.p) || 0;         // price per box
+  qty = Number(qty)||0;
+  if (unit === "part") return { pieces: qty, boxes: 0, value: qty * (p/u) };
+  return { pieces: qty * u, boxes: qty, value: qty * p };
+}
 
 /* ---------- tiny icons ---------- */
 const I = ({d, size=20, color="currentColor", fill="none", w=2}) => (
@@ -75,11 +84,7 @@ async function api(path, { method="GET", body, isForm=false } = {}) {
   if (body && isForm) opts.body = body;
   const res = await fetch(path, opts);
   if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
-  if (!res.ok) {
-    let msg = "Something went wrong.";
-    try { msg = (await res.json()).detail || msg; } catch {}
-    throw new Error(msg);
-  }
+  if (!res.ok) { let msg="Something went wrong."; try{ msg=(await res.json()).detail||msg; }catch{} throw new Error(msg); }
   return res.json();
 }
 
@@ -119,7 +124,8 @@ function App(){
   },[]);
   useEffect(()=>{ refresh().catch(()=>setLoaded(true)); },[refresh]);
 
-  const notConfigured = config.kitchens.length===0 || config.items.length===0;
+  const itemMap = React.useMemo(()=>{ const m={}; (config.items||[]).forEach(i=>m[i.name]=i); return m; },[config]);
+  const notConfigured = (config.items||[]).length===0;
 
   if(!loaded) return <div style={{display:"flex",height:"100%",alignItems:"center",justifyContent:"center",color:C.steel}}><IconScan size={28} color={C.steel} className="spin"/></div>;
 
@@ -127,9 +133,9 @@ function App(){
     <React.Fragment>
       <Header records={records} unsuccessful={unsuccessful}/>
       <div style={{flex:1,overflowY:"auto"}}>
-        {tab==="scan" && <ScanView config={config} notConfigured={notConfigured} onChanged={refresh} goSetup={()=>setTab("setup")}/>}
+        {tab==="scan" && <ScanView config={config} itemMap={itemMap} notConfigured={notConfigured} onChanged={refresh} goSetup={()=>setTab("setup")}/>}
         {tab==="day" && <DayView records={records}/>}
-        {tab==="checks" && <ChecksView unsuccessful={unsuccessful} config={config} onChanged={refresh}/>}
+        {tab==="checks" && <ChecksView unsuccessful={unsuccessful} config={config} itemMap={itemMap} onChanged={refresh}/>}
         {tab==="setup" && <SetupView config={config} onChanged={refresh}/>}
       </div>
       <TabBar tab={tab} setTab={setTab} checkCount={unsuccessful.length}/>
@@ -139,31 +145,69 @@ function App(){
 
 /* ---------- header ---------- */
 function Header({records,unsuccessful}){
-  const qty = records.reduce((s,r)=>s+r.items.reduce((a,i)=>a+(Number(i.qty)||0),0),0);
+  const value = records.reduce((s,r)=>s+r.items.reduce((a,i)=>a+(Number(i.value)||0),0),0);
   return (
     <div style={{background:C.ink,color:C.paper,padding:"14px 18px 16px"}}>
       <div style={{display:"flex",alignItems:"center",gap:9}}>
         <IconPkg size={18} color={C.amber}/>
         <span className="mono" style={{fontSize:12,letterSpacing:2,color:C.amber}}>KLOMU · DISPOSABLES</span>
       </div>
-      <div style={{display:"flex",gap:26,marginTop:12}}>
+      <div style={{display:"flex",gap:24,marginTop:12}}>
         <Stat n={records.length} label="sheets logged"/>
-        <Stat n={qty} label="packs out"/>
+        <Stat n={gbp(value)} label="value out" small/>
         <Stat n={unsuccessful.length} label="need checking" warn={unsuccessful.length>0}/>
       </div>
     </div>
   );
 }
-const Stat=({n,label,warn})=>(
+const Stat=({n,label,warn,small})=>(
   <div>
-    <div className="mono" style={{fontSize:26,fontWeight:700,lineHeight:1,color:warn?C.amber:C.paper}}>{n}</div>
+    <div className="mono" style={{fontSize:small?19:26,fontWeight:700,lineHeight:1.1,color:warn?C.amber:C.paper}}>{n}</div>
     <div style={{fontSize:10.5,letterSpacing:.4,color:"#9aa3ab",marginTop:4,textTransform:"uppercase"}}>{label}</div>
   </div>
 );
 
+/* ---------- unit toggle + line ---------- */
+function UnitToggle({unit,onChange}){
+  return (
+    <div style={{display:"flex",border:`1px solid ${C.line}`,borderRadius:8,overflow:"hidden"}}>
+      {[["box","Box"],["part","Sleeve"]].map(([v,l])=>(
+        <button key={v} onClick={()=>onChange(v)} style={{
+          padding:"6px 0",width:52,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+          background:unit===v?C.ink:"#fff",color:unit===v?C.paper:C.steel}}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+function ItemLine({line,item,onPatch,onRemove}){
+  const m=lineMaths(item,line.unit,line.qty);
+  return (
+    <div style={{marginBottom:10,paddingBottom:10,borderBottom:`1px dashed ${C.line}`}}>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <div style={{flex:1}}>
+          <Select value={line.name} onChange={v=>onPatch({name:v})} options={SEED.items.map(i=>i.name)} placeholder="— unmatched item —" bad={!line.name}/>
+        </div>
+        <button onClick={onRemove} style={iconBtn}>✕</button>
+      </div>
+      {line.raw && line.name!==line.raw && <div className="mono" style={{fontSize:10.5,color:line.name?C.steel:C.alert,margin:"3px 0"}}>read: "{line.raw}"</div>}
+      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:6}}>
+        <UnitToggle unit={line.unit} onChange={v=>onPatch({unit:v})}/>
+        <input type="number" min="0" inputMode="numeric" value={line.qty}
+          onChange={e=>onPatch({qty:Number(e.target.value)})}
+          style={{...inp,width:70,textAlign:"center",padding:"8px 4px"}}/>
+        <span style={{fontSize:11.5,color:C.steel,flex:1}}>
+          {line.unit==="part" ? `pieces · ${gbp(m.value)}` : `box${line.qty===1?"":"es"} · ${gbp(m.value)}`}
+        </span>
+      </div>
+      {line.unit==="part" && item && <div style={{fontSize:10.5,color:C.steel,marginTop:3}}>from a box of {item.u} @ {gbp(item.p)}</div>}
+    </div>
+  );
+}
+
 /* ---------- scan ---------- */
-function ScanView({config,notConfigured,onChanged,goSetup}){
-  const [stage,setStage]=useState("idle"); // idle reading review error
+function ScanView({config,itemMap,notConfigured,onChanged,goSetup}){
+  const [stage,setStage]=useState("idle");
   const [dataUrl,setDataUrl]=useState(null);
   const [draft,setDraft]=useState(null);
   const [err,setErr]=useState("");
@@ -183,7 +227,7 @@ function ScanView({config,notConfigured,onChanged,goSetup}){
       setDraft({
         kitchen:result?.kitchen?.matched||"", kitchenRaw:result?.kitchen?.raw||"",
         date:result?.date?.value||"", dateRaw:result?.date?.raw||"",
-        items:(result?.items||[]).map(it=>({id:uid(),name:it.matched||"",raw:it.raw||"",qty:Number(it.quantity)||0})),
+        items:(result?.items||[]).map(it=>({id:uid(),name:it.matched||"",raw:it.raw||"",unit:"box",qty:Number(it.quantity)||0})),
       });
       setStage("review");
     }catch(ex){
@@ -193,13 +237,13 @@ function ScanView({config,notConfigured,onChanged,goSetup}){
   };
 
   if(notConfigured) return (
-    <Empty icon={<IconGear size={30} color={C.steel}/>} title="Set up your lists first"
-      body="Add your kitchens and disposable items before scanning, so the reader knows what's valid."
+    <Empty icon={<IconGear size={30} color={C.steel}/>} title="Load the catalogue first"
+      body="Go to Setup and load the Championship catalogue (locations, items and prices) before scanning."
       action={<PrimaryBtn onClick={goSetup}>Go to Setup</PrimaryBtn>}/>
   );
 
   if(stage==="review"&&draft) return (
-    <ReviewCard draft={draft} setDraft={setDraft} dataUrl={dataUrl} config={config}
+    <ReviewCard draft={draft} setDraft={setDraft} dataUrl={dataUrl} config={config} itemMap={itemMap}
       onDone={()=>{onChanged();reset();}} onCancel={reset}/>
   );
 
@@ -211,31 +255,22 @@ function ScanView({config,notConfigured,onChanged,goSetup}){
           background:stage==="reading"?C.amberSoft:C.panel,color:C.ink,cursor:"pointer",
           display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
         {stage==="reading"?(
-          <React.Fragment>
-            <IconScan size={40} color={C.amber} className="spin"/>
-            <span className="mono" style={{fontSize:13,color:C.steel}}>Reading the sheet…</span>
-          </React.Fragment>
+          <React.Fragment><IconScan size={40} color={C.amber} className="spin"/><span className="mono" style={{fontSize:13,color:C.steel}}>Reading the sheet…</span></React.Fragment>
         ):(
           <React.Fragment>
-            <div style={{width:74,height:74,borderRadius:"50%",background:C.amber,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <IconCamera size={34} color="#fff"/>
-            </div>
+            <div style={{width:74,height:74,borderRadius:"50%",background:C.amber,display:"flex",alignItems:"center",justifyContent:"center"}}><IconCamera size={34} color="#fff"/></div>
             <span style={{fontWeight:700,fontSize:17}}>Photograph an order sheet</span>
             <span style={{fontSize:12.5,color:C.steel}}>Lay it flat, fill the frame, keep the date visible</span>
           </React.Fragment>
         )}
       </button>
-
       {stage==="error" && (
         <div style={{marginTop:16,background:C.alertSoft,border:`1px solid ${C.alert}`,borderRadius:12,padding:14}}>
           <div style={{display:"flex",gap:9,color:C.alert,fontWeight:700,fontSize:14,alignItems:"center"}}><IconAlert size={18} color={C.alert}/> Couldn't read that one</div>
           <p style={{margin:"8px 0 12px",fontSize:13}}>{err}</p>
           <div style={{display:"flex",gap:10}}>
             <PrimaryBtn onClick={()=>fileRef.current?.click()}>Try again</PrimaryBtn>
-            {dataUrl && <GhostBtn onClick={async()=>{
-              await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason:"Reader could not parse the sheet",draft:null,image:dataUrl}});
-              onChanged(); reset();
-            }}>Send to Checks</GhostBtn>}
+            {dataUrl && <GhostBtn onClick={async()=>{ await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason:"Reader could not parse the sheet",draft:null,image:dataUrl}}); onChanged(); reset(); }}>Send to Checks</GhostBtn>}
           </div>
         </div>
       )}
@@ -245,8 +280,8 @@ function ScanView({config,notConfigured,onChanged,goSetup}){
 }
 
 function ProcessNote(){
-  const rows=[["1","Kitchen","matched to your list, or flagged for a check"],
-    ["2","Items","each line matched to the order book and tallied"],
+  const rows=[["1","Kitchen","matched to your location list, or flagged"],
+    ["2","Items","matched, priced, tallied — Box or Sleeve per line"],
     ["3","Date","files the order under the right day; no date = check"]];
   return (
     <div style={{marginTop:22,borderTop:`1px solid ${C.line}`,paddingTop:16}}>
@@ -262,71 +297,57 @@ function ProcessNote(){
 }
 
 /* ---------- review card ---------- */
-function ReviewCard({draft,setDraft,dataUrl,config,onDone,onCancel}){
+function ReviewCard({draft,setDraft,dataUrl,config,itemMap,onDone,onCancel}){
   const [busy,setBusy]=useState(false);
   const setField=(k,v)=>setDraft({...draft,[k]:v});
-  const setItem=(id,patch)=>setDraft({...draft,items:draft.items.map(i=>i.id===id?{...i,...patch}:i)});
+  const patch=(id,p)=>setDraft({...draft,items:draft.items.map(i=>i.id===id?{...i,...p}:i)});
   const removeItem=(id)=>setDraft({...draft,items:draft.items.filter(i=>i.id!==id)});
-  const addItem=()=>setDraft({...draft,items:[...draft.items,{id:uid(),name:"",raw:"",qty:1}]});
+  const addItem=()=>setDraft({...draft,items:[...draft.items,{id:uid(),name:"",raw:"",unit:"box",qty:1}]});
 
   const kitchenBad=!draft.kitchen, dateBad=!draft.date;
   const itemBad=draft.items.some(i=>!i.name||!i.qty);
   const blocking=kitchenBad||dateBad||itemBad||draft.items.length===0;
+  const total=draft.items.reduce((s,i)=>s+lineMaths(itemMap[i.name],i.unit,i.qty).value,0);
+
+  const build=(list)=>list.filter(i=>i.name&&i.qty>0).map(i=>{
+    const m=lineMaths(itemMap[i.name],i.unit,i.qty);
+    return {name:i.name,qty:Number(i.qty),unit:i.unit,pieces:Math.round(m.pieces*100)/100,value:Math.round(m.value*100)/100};
+  });
 
   const commit=async()=>{
     setBusy(true);
-    try{
-      await api("/api/records",{method:"POST",body:{
-        id:uid(),dateISO:draft.date,kitchen:draft.kitchen,
-        items:draft.items.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:Number(i.qty)})),
-        source:"scan",
-      }});
-      onDone();
-    }catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
+    try{ await api("/api/records",{method:"POST",body:{id:uid(),dateISO:draft.date,kitchen:draft.kitchen,items:build(draft.items),source:"scan"}}); onDone(); }
+    catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
   };
   const toChecks=async()=>{
     setBusy(true);
     const reason=[kitchenBad&&"kitchen not recognised",dateBad&&"no readable date",itemBad&&"unmatched items"].filter(Boolean).join(", ")||"sent for manual check";
-    try{
-      await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason,draft,image:dataUrl}});
-      onDone();
-    }catch(ex){ alert(ex.message); setBusy(false); }
+    try{ await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason,draft,image:dataUrl}}); onDone(); }
+    catch(ex){ alert(ex.message); setBusy(false); }
   };
 
   return (
     <div style={{padding:18}}>
       <div style={{background:C.panel,borderRadius:14,border:`1px solid ${C.line}`,overflow:"hidden"}}>
         <div style={{background:blocking?C.amber:C.go,color:"#fff",padding:"9px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span className="mono" style={{fontSize:12,letterSpacing:2,fontWeight:700}}>{blocking?"NEEDS A CHECK":"READY TO LOG"}</span>
+          <span className="mono" style={{fontSize:12,letterSpacing:2,fontWeight:700}}>{blocking?"NEEDS A CHECK":"READY · "+gbp(total)}</span>
           {dataUrl && <img src={dataUrl} alt="" style={{height:30,borderRadius:4,border:"1px solid rgba(255,255,255,.5)"}}/>}
         </div>
         <div style={{padding:16}}>
           <FieldRow label="Kitchen" bad={kitchenBad} hint={draft.kitchenRaw&&`read: "${draft.kitchenRaw}"`}>
-            <Select value={draft.kitchen} onChange={v=>setField("kitchen",v)} options={config.kitchens} placeholder="— not recognised —"/>
+            <Select value={draft.kitchen} onChange={v=>setField("kitchen",v)} options={SEED.kitchens} placeholder="— not recognised —"/>
           </FieldRow>
           <FieldRow label="Date" bad={dateBad} hint={draft.dateRaw&&`read: "${draft.dateRaw}"`}>
             <input type="date" value={draft.date} onChange={e=>setField("date",e.target.value)} style={{...inp,borderColor:dateBad?C.alert:C.line}}/>
           </FieldRow>
-          <div style={{margin:"14px 0 6px",fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase",display:"flex",justifyContent:"space-between"}}><span>Items</span><span>Qty</span></div>
-          {draft.items.map(it=>(
-            <div key={it.id} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
-              <div style={{flex:1}}>
-                <Select value={it.name} onChange={v=>setItem(it.id,{name:v})} options={config.items.map(i=>i.name)} placeholder="— unmatched item —" bad={!it.name}/>
-                {it.raw && it.name!==it.raw && <div className="mono" style={{fontSize:10.5,color:it.name?C.steel:C.alert,marginTop:2}}>read: "{it.raw}"</div>}
-              </div>
-              <input type="number" min="0" inputMode="numeric" value={it.qty} onChange={e=>setItem(it.id,{qty:Number(e.target.value)})} style={{...inp,width:58,textAlign:"center",padding:"9px 4px"}}/>
-              <button onClick={()=>removeItem(it.id)} style={iconBtn}>✕</button>
-            </div>
-          ))}
+          <div style={{margin:"14px 0 8px",fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase"}}>Items</div>
+          {draft.items.map(it=><ItemLine key={it.id} line={it} item={itemMap[it.name]} onPatch={p=>patch(it.id,p)} onRemove={()=>removeItem(it.id)}/>)}
           <button onClick={addItem} style={{...ghost,width:"100%",marginTop:4,fontSize:13}}>+ Add a line</button>
         </div>
       </div>
-
       {blocking && <p style={{fontSize:12,color:C.amber,margin:"12px 2px 0",display:"flex",gap:7,alignItems:"flex-start"}}><IconAlert size={15} color={C.amber}/> Fix the highlighted fields to log this, or send the whole sheet to Checks.</p>}
-
       <div style={{display:"flex",gap:10,marginTop:16}}>
-        <button onClick={commit} disabled={blocking||busy}
-          style={{...primary,flex:1,background:C.go,opacity:(blocking||busy)?.4:1,cursor:(blocking||busy)?"not-allowed":"pointer"}}>✓ Confirm &amp; log</button>
+        <button onClick={commit} disabled={blocking||busy} style={{...primary,flex:1,background:C.go,opacity:(blocking||busy)?.4:1,cursor:(blocking||busy)?"not-allowed":"pointer"}}>✓ Confirm &amp; log</button>
         <button onClick={toChecks} disabled={busy} style={{...ghost,color:C.alert,borderColor:C.alert}}>To Checks</button>
       </div>
       <button onClick={onCancel} disabled={busy} style={txtBtn}>Discard this scan</button>
@@ -334,16 +355,16 @@ function ReviewCard({draft,setDraft,dataUrl,config,onDone,onCancel}){
   );
 }
 
-/* ---------- day / insights (public) ---------- */
+/* ---------- day / insights ---------- */
 function DayView({records}){
   const dates=Array.from(new Set(records.map(r=>r.dateISO).filter(Boolean))).sort().reverse();
   const [sel,setSel]=useState("all");
   const scoped=sel==="all"?records:records.filter(r=>r.dateISO===sel);
-  const itemT={},kitT={};
-  scoped.forEach(r=>r.items.forEach(it=>{itemT[it.name]=(itemT[it.name]||0)+Number(it.qty);kitT[r.kitchen]=(kitT[r.kitchen]||0)+Number(it.qty);}));
-  const itemRows=Object.entries(itemT).sort((a,b)=>b[1]-a[1]);
-  const kitRows=Object.entries(kitT).sort((a,b)=>b[1]-a[1]);
-  const total=itemRows.reduce((s,[,q])=>s+q,0);
+  const itemV={},kitV={};
+  scoped.forEach(r=>r.items.forEach(it=>{itemV[it.name]=(itemV[it.name]||0)+Number(it.value||0);kitV[r.kitchen]=(kitV[r.kitchen]||0)+Number(it.value||0);}));
+  const itemRows=Object.entries(itemV).sort((a,b)=>b[1]-a[1]);
+  const kitRows=Object.entries(kitV).sort((a,b)=>b[1]-a[1]);
+  const total=itemRows.reduce((s,[,v])=>s+v,0);
   const top=kitRows[0]?.[1]||1;
 
   if(records.length===0) return <Empty icon={<IconList size={30} color={C.steel}/>} title="Nothing logged yet" body="Scanned sheets will be summarised here, grouped by their date."/>;
@@ -356,62 +377,56 @@ function DayView({records}){
       </div>
       <div style={{display:"flex",gap:12,marginBottom:20}}>
         <MiniStat n={scoped.length} label="sheets"/>
-        <MiniStat n={itemRows.length} label="distinct items"/>
-        <MiniStat n={total} label="total packs"/>
+        <MiniStat n={itemRows.length} label="items"/>
+        <MiniStat n={gbp(total)} label="value" small/>
       </div>
-      <SectionLabel>Top kitchens by volume</SectionLabel>
+      <SectionLabel>Top kitchens by spend</SectionLabel>
       <div style={{marginBottom:22}}>
-        {kitRows.map(([k,q])=>(
+        {kitRows.map(([k,v])=>(
           <div key={k} style={{marginBottom:9}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}><span style={{fontWeight:600}}>{k}</span><span className="mono" style={{color:C.steel}}>{q}</span></div>
-            <div style={{height:7,background:C.line,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.max(4,(q/top)*100)}%`,background:C.amber}}/></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}><span style={{fontWeight:600}}>{k}</span><span className="mono" style={{color:C.steel}}>{gbp(v)}</span></div>
+            <div style={{height:7,background:C.line,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.max(4,(v/top)*100)}%`,background:C.amber}}/></div>
           </div>
         ))}
       </div>
-      <SectionLabel>Items used</SectionLabel>
+      <SectionLabel>Items by value</SectionLabel>
       <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,overflow:"hidden",marginBottom:22}}>
-        {itemRows.map(([name,q],idx)=>(
+        {itemRows.map(([name,v],idx)=>(
           <div key={name} style={{display:"flex",justifyContent:"space-between",padding:"11px 14px",borderBottom:idx<itemRows.length-1?`1px solid ${C.line}`:"none"}}>
-            <span style={{fontSize:13.5}}>{name}</span><span className="mono" style={{fontWeight:700}}>{q}</span>
+            <span style={{fontSize:13.5,paddingRight:10}}>{name}</span><span className="mono" style={{fontWeight:700,whiteSpace:"nowrap"}}>{gbp(v)}</span>
           </div>
         ))}
       </div>
-      <PrimaryBtn full onClick={()=>exportExcel(records)}>↓ Export Excel (tab per day)</PrimaryBtn>
+      <PrimaryBtn full onClick={()=>exportExcel(records)}>↓ Export Excel</PrimaryBtn>
       <button onClick={()=>exportCsv(scoped)} style={txtBtn}>Download CSV of {sel==="all"?"all records":fmtDate(sel)}</button>
     </div>
   );
 }
 
 /* ---------- checks ---------- */
-function ChecksView({unsuccessful,config,onChanged}){
+function ChecksView({unsuccessful,config,itemMap,onChanged}){
   if(unsuccessful.length===0) return <Empty icon={<IconCheck size={30} color={C.go}/>} title="All clear" body="Sheets the reader wasn't sure about land here for a human to sort out. None right now."/>;
-  return <div style={{padding:18}}>{unsuccessful.map(u=><CheckCard key={u.id} entry={u} config={config} onChanged={onChanged}/>)}</div>;
+  return <div style={{padding:18}}>{unsuccessful.map(u=><CheckCard key={u.id} entry={u} itemMap={itemMap} onChanged={onChanged}/>)}</div>;
 }
-function CheckCard({entry,config,onChanged}){
+function CheckCard({entry,itemMap,onChanged}){
   const [open,setOpen]=useState(false);
   const [busy,setBusy]=useState(false);
   const seed=entry.draft||{};
   const [d,setD]=useState({
     kitchen:seed.kitchen||"", date:seed.date||todayISO(),
-    items:(seed.items||[{id:uid(),name:"",qty:1}]).map(i=>({id:uid(),name:i.name||"",qty:i.qty||1})),
+    items:(seed.items&&seed.items.length?seed.items:[{name:"",unit:"box",qty:1}]).map(i=>({id:uid(),name:i.name||"",unit:i.unit||"box",qty:i.qty||1})),
   });
+  const patch=(id,p)=>setD({...d,items:d.items.map(x=>x.id===id?{...x,...p}:x)});
   const ready=d.kitchen&&d.date&&d.items.length&&d.items.every(i=>i.name&&i.qty>0);
+
+  const build=(list)=>list.filter(i=>i.name&&i.qty>0).map(i=>{const m=lineMaths(itemMap[i.name],i.unit,i.qty);return {name:i.name,qty:Number(i.qty),unit:i.unit,pieces:Math.round(m.pieces*100)/100,value:Math.round(m.value*100)/100};});
 
   const resolve=async()=>{
     setBusy(true);
-    try{
-      await api("/api/records",{method:"POST",body:{id:uid(),dateISO:d.date,kitchen:d.kitchen,
-        items:d.items.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:Number(i.qty)})),source:"manual"}});
-      await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"});
-      onChanged();
-    }catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
+    try{ await api("/api/records",{method:"POST",body:{id:uid(),dateISO:d.date,kitchen:d.kitchen,items:build(d.items),source:"manual"}}); await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"}); onChanged(); }
+    catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
   };
-  const del=async()=>{
-    if(!confirm("Discard this check? The photo will be deleted too.")) return;
-    setBusy(true);
-    try{ await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"}); onChanged(); }
-    catch(ex){ alert(ex.message); setBusy(false); }
-  };
+  const del=async()=>{ if(!confirm("Discard this check? The photo will be deleted too.")) return; setBusy(true); try{ await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"}); onChanged(); }catch(ex){ alert(ex.message); setBusy(false); } };
 
   return (
     <div style={{background:C.panel,border:`1px solid ${C.line}`,borderLeft:`4px solid ${C.alert}`,borderRadius:12,marginBottom:14,overflow:"hidden"}}>
@@ -425,17 +440,11 @@ function CheckCard({entry,config,onChanged}){
       {open && (
         <div style={{padding:"0 15px 15px"}}>
           {entry.image && <img src={entry.image} alt="order sheet" style={{width:"100%",borderRadius:8,border:`1px solid ${C.line}`,marginBottom:14}}/>}
-          <FieldRow label="Kitchen" bad={!d.kitchen}><Select value={d.kitchen} onChange={v=>setD({...d,kitchen:v})} options={config.kitchens} placeholder="— choose kitchen —"/></FieldRow>
+          <FieldRow label="Kitchen" bad={!d.kitchen}><Select value={d.kitchen} onChange={v=>setD({...d,kitchen:v})} options={SEED.kitchens} placeholder="— choose kitchen —"/></FieldRow>
           <FieldRow label="Date" bad={!d.date}><input type="date" value={d.date} onChange={e=>setD({...d,date:e.target.value})} style={inp}/></FieldRow>
-          <div style={{fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase",margin:"10px 0 6px",fontWeight:700}}>Items</div>
-          {d.items.map(it=>(
-            <div key={it.id} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
-              <div style={{flex:1}}><Select value={it.name} onChange={v=>setD({...d,items:d.items.map(x=>x.id===it.id?{...x,name:v}:x)})} options={config.items.map(i=>i.name)} placeholder="— choose item —" bad={!it.name}/></div>
-              <input type="number" min="0" value={it.qty} onChange={e=>setD({...d,items:d.items.map(x=>x.id===it.id?{...x,qty:Number(e.target.value)}:x)})} style={{...inp,width:58,textAlign:"center"}}/>
-              <button onClick={()=>setD({...d,items:d.items.filter(x=>x.id!==it.id)})} style={iconBtn}>✕</button>
-            </div>
-          ))}
-          <button onClick={()=>setD({...d,items:[...d.items,{id:uid(),name:"",qty:1}]})} style={{...ghost,width:"100%",fontSize:13,marginTop:2}}>+ Add a line</button>
+          <div style={{fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase",margin:"10px 0 8px",fontWeight:700}}>Items</div>
+          {d.items.map(it=><ItemLine key={it.id} line={it} item={itemMap[it.name]} onPatch={p=>patch(it.id,p)} onRemove={()=>setD({...d,items:d.items.filter(x=>x.id!==it.id)})}/>)}
+          <button onClick={()=>setD({...d,items:[...d.items,{id:uid(),name:"",unit:"box",qty:1}]})} style={{...ghost,width:"100%",fontSize:13,marginTop:2}}>+ Add a line</button>
           <div style={{display:"flex",gap:10,marginTop:14}}>
             <button disabled={!ready||busy} onClick={resolve} style={{...primary,flex:1,background:C.go,opacity:(ready&&!busy)?1:.4,cursor:(ready&&!busy)?"pointer":"not-allowed"}}>✓ Log it</button>
             <button disabled={busy} onClick={del} style={{...ghost,color:C.alert,borderColor:C.alert}}>Delete</button>
@@ -448,39 +457,39 @@ function CheckCard({entry,config,onChanged}){
 
 /* ---------- setup ---------- */
 function SetupView({config,onChanged}){
-  const [kitchens,setKitchens]=useState(config.kitchens.join("\n"));
-  const [items,setItems]=useState(config.items.map(i=>i.name).join("\n"));
   const [pass,setPass]=useState(getToken());
-  const [saved,setSaved]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState("");
+  const loaded=(config.items||[]).length;
 
-  const dedupe=t=>Array.from(new Set(t.split("\n").map(s=>s.trim()).filter(Boolean)));
-  const save=async()=>{
-    setToken(pass.trim());
-    setBusy(true);
-    try{
-      await api("/api/config",{method:"PUT",body:{kitchens:dedupe(kitchens),items:dedupe(items).map(name=>({name}))}});
-      setSaved(true); setTimeout(()=>setSaved(false),1800); onChanged();
-    }catch(ex){ alert(ex.code===401?"That passcode wasn't accepted by the server.":ex.message); }
+  const loadCatalogue=async()=>{
+    setToken(pass.trim()); setBusy(true); setMsg("");
+    try{ await api("/api/config",{method:"PUT",body:{kitchens:SEED.kitchens,items:SEED.items}}); setMsg(`Loaded ${SEED.kitchens.length} locations and ${SEED.items.length} items.`); onChanged(); }
+    catch(ex){ setMsg(ex.code===401?"That passcode wasn't accepted by the server.":ex.message); }
     setBusy(false);
   };
 
   return (
     <div style={{padding:18}}>
       <Label>Staff passcode</Label>
-      <p style={{fontSize:12.5,color:C.steel,margin:"0 0 7px"}}>Needed to scan, log, or edit. Viewers see the insights without it. Ask whoever set up the server for the code.</p>
-      <input type="text" value={pass} onChange={e=>setPass(e.target.value)} placeholder="passcode" style={inp} autoCapitalize="off" autoCorrect="off"/>
+      <p style={{fontSize:12.5,color:C.steel,margin:"0 0 7px"}}>Needed to scan, log, or edit. Viewers see the insights without it.</p>
+      <input type="text" value={pass} onChange={e=>{setPass(e.target.value);setToken(e.target.value.trim());}} placeholder="passcode" style={inp} autoCapitalize="off" autoCorrect="off"/>
 
-      <Label style={{marginTop:18}}>Kitchens</Label>
-      <textarea value={kitchens} onChange={e=>setKitchens(e.target.value)} placeholder={"Centre Court Kitchen\nPlayers' Lounge\nMedia Centre"} rows={6} style={ta}/>
-      <Count n={dedupe(kitchens).length} word="kitchen"/>
+      <div style={{marginTop:22,padding:16,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12}}>
+        <Label>Championship catalogue</Label>
+        <p style={{fontSize:12.5,color:C.steel,margin:"2px 0 12px"}}>
+          {loaded ? `Loaded: ${config.kitchens.length} locations, ${config.items.length} items with prices.` :
+          "Not loaded yet. This fills in all locations, items and box prices from your stock register."}
+        </p>
+        <button onClick={loadCatalogue} disabled={busy} style={{...primary,width:"100%",background:C.amber}}>
+          {busy?"Loading…":(loaded?"Reload catalogue":`Load catalogue (${SEED.kitchens.length} locations · ${SEED.items.length} items)`)}
+        </button>
+        {msg && <p style={{fontSize:12.5,color:msg.includes("Loaded")?C.go:C.alert,marginTop:10,marginBottom:0}}>{msg}</p>}
+      </div>
 
-      <Label style={{marginTop:18}}>Disposable items</Label>
-      <p style={{fontSize:12.5,color:C.steel,margin:"0 0 7px"}}>One per line. Bake the pack size into the name (e.g. "Napkins (case of 2000)") so the count logged is the number of packs.</p>
-      <textarea value={items} onChange={e=>setItems(e.target.value)} placeholder={"Paper plates 9in (case of 1000)\nWhite napkins (pack of 500)\nWooden forks (box of 1000)\nClear cups 12oz (sleeve of 50)\nFlat lids 12oz (sleeve of 50)\nBin bags heavy duty (roll of 200)"} rows={9} style={ta}/>
-      <Count n={dedupe(items).length} word="item"/>
-
-      <button onClick={save} disabled={busy} style={{...primary,width:"100%",marginTop:18,background:saved?C.go:C.amber}}>{saved?"✓ Saved":"Save"}</button>
+      <div style={{marginTop:18,fontSize:12,color:C.steel,lineHeight:1.55}}>
+        <b>Box vs Sleeve.</b> When logging, each line can be a whole <b>Box</b> or a <b>Sleeve</b> (part of a box). For a sleeve, enter the number of pieces taken — the value is charged pro-rata from the box price.
+      </div>
     </div>
   );
 }
@@ -506,7 +515,7 @@ function TabBar({tab,setTab,checkCount}){
   );
 }
 
-/* ---------- shared bits ---------- */
+/* ---------- shared ---------- */
 function Empty({icon,title,body,action}){
   return (
     <div style={{padding:"60px 30px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
@@ -533,8 +542,7 @@ function FieldRow({label,bad,hint,children}){
 function Select({value,onChange,options,placeholder,bad}){
   return (
     <div style={{position:"relative"}}>
-      <select value={value} onChange={e=>onChange(e.target.value)}
-        style={{...inp,paddingRight:30,borderColor:(bad||!value)?C.alert:C.line,color:value?C.ink:C.alert,fontWeight:value?600:500}}>
+      <select value={value} onChange={e=>onChange(e.target.value)} style={{...inp,paddingRight:30,borderColor:(bad||!value)?C.alert:C.line,color:value?C.ink:C.alert,fontWeight:value?600:500}}>
         <option value="">{placeholder}</option>
         {options.map(o=><option key={o} value={o}>{o}</option>)}
       </select>
@@ -543,69 +551,76 @@ function Select({value,onChange,options,placeholder,bad}){
   );
 }
 const Chip=({active,onClick,children})=>(<button onClick={onClick} className="mono" style={{flexShrink:0,padding:"7px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,cursor:"pointer",border:`1px solid ${active?C.ink:C.line}`,background:active?C.ink:C.panel,color:active?C.paper:C.steel}}>{children}</button>);
-const MiniStat=({n,label})=>(<div style={{flex:1,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"12px 10px"}}><div className="mono" style={{fontSize:22,fontWeight:700}}>{n}</div><div style={{fontSize:10.5,color:C.steel,textTransform:"uppercase",letterSpacing:.4,marginTop:2}}>{label}</div></div>);
+const MiniStat=({n,label,small})=>(<div style={{flex:1,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"12px 10px"}}><div className="mono" style={{fontSize:small?17:22,fontWeight:700}}>{n}</div><div style={{fontSize:10.5,color:C.steel,textTransform:"uppercase",letterSpacing:.4,marginTop:2}}>{label}</div></div>);
 const SectionLabel=({children})=>(<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12.5,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:11}}><span style={{color:C.amber}}>▸</span>{children}</div>);
 const Label=({children,style})=>(<div style={{fontSize:11.5,letterSpacing:1,textTransform:"uppercase",fontWeight:700,marginBottom:7,...style}}>{children}</div>);
-const Count=({n,word})=>(<div className="mono" style={{fontSize:11.5,color:C.steel,marginTop:6}}>{n} {word}{n===1?"":"s"}</div>);
 
-function promptPasscode(){
-  const t=prompt("Enter the staff passcode to scan and log:");
-  if(t){ setToken(t.trim()); return true; }
-  return false;
-}
+function promptPasscode(){ const t=prompt("Enter the staff passcode to scan and log:"); if(t){ setToken(t.trim()); return true; } return false; }
 
 /* ---------- export ---------- */
+function aggLine(records, keyFn){
+  const m={};
+  records.forEach(r=>r.items.forEach(it=>{
+    const k=keyFn(r,it);
+    if(!m[k]) m[k]={boxes:0,pieces:0,value:0};
+    if(it.unit==="part") m[k].pieces+=Number(it.pieces||it.qty||0);
+    else m[k].boxes+=Number(it.qty||0);
+    m[k].value+=Number(it.value||0);
+  }));
+  return m;
+}
 function exportExcel(records){
   const wb=XLSX.utils.book_new();
   const dates=Array.from(new Set(records.map(r=>r.dateISO).filter(Boolean))).sort();
-  const all={};
-  records.forEach(r=>r.items.forEach(it=>{all[it.name]=(all[it.name]||0)+Number(it.qty);}));
-  const summary=[["Item","Total packs (all days)"],...Object.entries(all).sort((a,b)=>b[1]-a[1])];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),"Summary");
 
-  // "By kitchen, by day" — concatenated line items: one row per Date / Kitchen / Item with the day's total qty
-  const bd=[["Date","Kitchen","Item","Qty (full day)"]];
+  // Summary (whole event, per item)
+  const sm=aggLine(records,(r,it)=>it.name);
+  const sRows=[["Item","Boxes","Loose pieces","Value £"]];
+  Object.entries(sm).sort((a,b)=>b[1].value-a[1].value).forEach(([n,v])=>sRows.push([n,v.boxes,v.pieces,round2(v.value)]));
+  sRows.push(["TOTAL","","",round2(Object.values(sm).reduce((s,v)=>s+v.value,0))]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sRows),"Summary");
+
+  // By kitchen by day — concatenated: Date / Kitchen / Item / Boxes / Loose pieces / Value
+  const bd=[["Date","Kitchen","Item","Boxes","Loose pieces","Value £"]];
   dates.forEach(date=>{
     const day=records.filter(r=>r.dateISO===date);
     const kitchens=Array.from(new Set(day.map(r=>r.kitchen))).sort();
     kitchens.forEach(k=>{
-      const tally={};
-      day.filter(r=>r.kitchen===k).forEach(r=>r.items.forEach(it=>{tally[it.name]=(tally[it.name]||0)+Number(it.qty);}));
-      Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([name,qty],idx)=>{
-        bd.push([idx===0?fmtDate(date):"", idx===0?k:"", name, qty]);
+      const m=aggLine(day.filter(r=>r.kitchen===k),(r,it)=>it.name);
+      Object.entries(m).sort((a,b)=>b[1].value-a[1].value).forEach(([n,v],idx)=>{
+        bd.push([idx===0?fmtDate(date):"", idx===0?k:"", n, v.boxes, v.pieces, round2(v.value)]);
       });
     });
   });
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(bd),"By kitchen by day");
 
+  // Spend by day/kitchen
+  const cd=[["Date","Kitchen","Spend £"]];
   dates.forEach(date=>{
     const day=records.filter(r=>r.dateISO===date);
-    const kitchens=Array.from(new Set(day.map(r=>r.kitchen)));
-    const items=Array.from(new Set(day.flatMap(r=>r.items.map(i=>i.name))));
-    const grid={};
-    day.forEach(r=>r.items.forEach(it=>{grid[it.name]=grid[it.name]||{};grid[it.name][r.kitchen]=(grid[it.name][r.kitchen]||0)+Number(it.qty);}));
-    const header=["Item",...kitchens,"Total"];
-    const rows=items.map(n=>{const cells=kitchens.map(k=>grid[n]?.[k]||0);return [n,...cells,cells.reduce((a,b)=>a+b,0)];});
-    const totalRow=["TOTAL",...kitchens.map(k=>items.reduce((s,n)=>s+(grid[n]?.[k]||0),0)),""];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([header,...rows,totalRow]),safeName(date));
+    const kitchens=Array.from(new Set(day.map(r=>r.kitchen))).sort();
+    let dayTotal=0;
+    kitchens.forEach(k=>{ const v=day.filter(r=>r.kitchen===k).reduce((s,r)=>s+r.items.reduce((a,i)=>a+Number(i.value||0),0),0); dayTotal+=v; cd.push([fmtDate(date),k,round2(v)]); });
+    cd.push(["",fmtDate(date)+" total",round2(dayTotal)]);
   });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cd),"Spend by day");
+
   if(dates.length===0) XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["No dated records yet"]]),"Empty");
   XLSX.writeFile(wb,`klomu-order-log-${todayISO()}.xlsx`);
 }
 function exportCsv(records){
-  const rows=[["Date","Kitchen","Item","Quantity","Source","Logged at"]];
-  records.forEach(r=>r.items.forEach(it=>rows.push([r.dateISO,r.kitchen,it.name,it.qty,r.source,r.scannedAt])));
+  const rows=[["Date","Kitchen","Item","Unit","Qty","Loose pieces","Value £","Source","Logged at"]];
+  records.forEach(r=>r.items.forEach(it=>rows.push([r.dateISO,r.kitchen,it.name,it.unit||"box",it.qty,it.unit==="part"?(it.pieces||it.qty):"",round2(it.value||0),r.source,r.scannedAt])));
   const csv=rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob=new Blob([csv],{type:"text/csv"}); const a=document.createElement("a");
   a.href=URL.createObjectURL(blob); a.download=`klomu-order-log-${todayISO()}.csv`; a.click();
 }
 
 /* ---------- utils + styles ---------- */
-const safeName=s=>s.replace(/[\\/?*[\]:]/g,"-").slice(0,31);
+const round2=n=>Math.round((Number(n)||0)*100)/100;
 const fmtDate=iso=>{try{return new Date(iso+"T00:00:00").toLocaleDateString(undefined,{day:"2-digit",month:"short"});}catch{return iso;}};
 const fmtTime=iso=>{try{return new Date(iso).toLocaleString(undefined,{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"short"});}catch{return"";}};
 const inp={width:"100%",padding:"10px 12px",borderRadius:9,border:`1px solid ${C.line}`,background:"#fff",color:C.ink,fontSize:14.5,outline:"none"};
-const ta={...inp,resize:"vertical",lineHeight:1.6,fontFamily:"ui-monospace,Menlo,monospace",fontSize:13.5};
 const primary={display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px 18px",borderRadius:11,border:"none",background:C.amber,color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer"};
 const ghost={display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,padding:"11px 15px",borderRadius:11,border:`1px solid ${C.line}`,background:"#fff",color:C.ink,fontSize:14,fontWeight:600,cursor:"pointer"};
 const txtBtn={width:"100%",background:"none",border:"none",color:C.steel,fontSize:13,cursor:"pointer",textDecoration:"underline",padding:8,marginTop:12};
