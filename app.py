@@ -14,8 +14,10 @@ those up too — not recommended while the app is public.
 """
 
 import os
+import re
 import json
 import base64
+import difflib
 import sqlite3
 from pathlib import Path
 from datetime import datetime, timezone
@@ -118,13 +120,69 @@ def build_prompt(kitchens, items):
         "Record the number exactly as written; the unit is part of the valid item name, "
         "so match to the closest valid entry and put the count in \"quantity\".\n\n"
         "For the kitchen and for each item, set \"matched\" to the EXACT valid entry from "
-        "the lists above, allowing for handwriting, abbreviations, casing and minor typos. "
-        "If you are not reasonably confident it matches any valid entry, set \"matched\" to null.\n\n"
+        "the lists above (copied character for character). Match on the meaningful words, "
+        "IGNORING case, punctuation, and a leading \"the\" — e.g. \"Hill Larder\", \"hill larder\" "
+        "and \"THE HILL LARDER\" are the SAME entry. Allow for handwriting, abbreviations and "
+        "minor typos. When two entries are close, choose the one sharing the most words with what "
+        "is written. Only use null if nothing on the list is plausibly the same thing. Prefer "
+        "recommending the closest valid entry over null.\n\n"
         "Return ONLY a JSON object, no markdown fences, no commentary:\n"
         '{"kitchen":{"raw":"<text seen>","matched":"<valid kitchen or null>"},'
         '"date":{"raw":"<text seen>","value":"<YYYY-MM-DD or null>"},'
         '"items":[{"raw":"<text seen>","matched":"<valid item or null>","quantity":<number>}]}'
     )
+
+
+_STOP = {"the", "a", "an", "of", "and", "for", "with", "x", "1", "&"}
+
+
+def _norm(s):
+    s = (s or "").lower().strip()
+    s = re.sub(r"^the\s+", "", s)          # ignore a leading "the"
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)     # punctuation -> space
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _tokens(s):
+    return [t for t in _norm(s).split() if t and t not in _STOP]
+
+
+def best_match(raw, candidates, floor=0.34):
+    """Resolve a messy string to the closest valid entry using word overlap.
+    Always recommends the best candidate above `floor`, else None."""
+    if not raw:
+        return None
+    rn = _norm(raw)
+    for c in candidates:                    # exact normalized match wins
+        if _norm(c) == rn:
+            return c
+    rset = set(_tokens(raw))
+    best, best_score = None, 0.0
+    for c in candidates:
+        cset = set(_tokens(c))
+        if not rset or not cset:
+            continue
+        overlap = len(rset & cset)
+        word_score = overlap / min(len(rset), len(cset))     # shared significant words
+        seq = difflib.SequenceMatcher(None, rn, _norm(c)).ratio()
+        score = 0.72 * word_score + 0.28 * seq
+        if score > best_score:
+            best, best_score = c, score
+    return best if best_score >= floor else None
+
+
+def _resolve(parsed, kitchens, item_names):
+    """Force kitchen and each item onto a real catalogue entry so prices apply."""
+    valid_k = set(kitchens)
+    k = parsed.get("kitchen") or {}
+    if k.get("matched") not in valid_k:
+        k["matched"] = best_match(k.get("matched") or k.get("raw"), kitchens, floor=0.30)
+    parsed["kitchen"] = k
+    valid_i = set(item_names)
+    for it in parsed.get("items") or []:
+        if it.get("matched") not in valid_i:
+            it["matched"] = best_match(it.get("matched") or it.get("raw"), item_names, floor=0.42)
+    return parsed
 
 
 def read_sheet(image_bytes: bytes, media_type: str, kitchens, items) -> dict:
@@ -154,9 +212,10 @@ def read_sheet(image_bytes: bytes, media_type: str, kitchens, items) -> dict:
     if start == -1 or end == -1:
         raise HTTPException(status_code=422, detail="Could not read the sheet clearly.")
     try:
-        return json.loads(text[start:end + 1])
+        parsed = json.loads(text[start:end + 1])
     except json.JSONDecodeError:
         raise HTTPException(status_code=422, detail="Could not read the sheet clearly.")
+    return _resolve(parsed, kitchens, [i["name"] for i in items] if items and isinstance(items[0], dict) else list(items))
 
 
 # ----------------------------------------------------------------------------
