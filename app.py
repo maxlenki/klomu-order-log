@@ -1,671 +1,436 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#191c1f" />
-<title>Klomu · Disposables Order Log</title>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@8.0.3/babel.min.js"></script>
-<script>
-  if (window.Babel) {
-    Babel.registerPreset("react-classic", {
-      presets: [[Babel.availablePresets["react"], { runtime: "classic" }]],
-    });
-  }
-</script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<style>
-  :root{
-    --paper:#f4f1ea; --panel:#fff; --ink:#191c1f; --steel:#5b6670; --line:#d9d4c7;
-    --amber:#d98a1f; --amber-soft:#fbeccd; --go:#2f8f63; --alert:#c4452f; --alert-soft:#f6ddd6;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-  #root{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-  button{font-family:inherit}
-  input,select,textarea{font-family:inherit}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .spin{animation:spin 1s linear infinite}
-  ::-webkit-scrollbar{width:0;height:0}
-</style>
-</head>
-<body>
-<div id="root"></div>
+"""
+Klomu Disposables Order Log — backend.
 
-<script type="text/babel" data-presets="react-classic">
-const { useState, useEffect, useRef, useCallback } = React;
+One FastAPI service that:
+  - serves the web app (static/index.html)
+  - exposes a small JSON API
+  - reads order-sheet photos with Claude (key stays server-side)
+  - stores everything in SQLite (put the file on a Render Disk so it survives deploys)
 
-/* ==== Championship catalogue (locations + item names) ==== */
-const SEED = {"kitchens":["THE HILL LARDER","WALLED GARDEN","AORANGI PAVILLION","MEDIA","LTA ADVANTAGE LOUNGE","CAVENDISH","PARKSIDE FOOD MARKET","PICNIC PICK UP","NO1 DEBS","NO.1 BAR","LTA PRESIDENTS SUITE","NO.1 STAFF REST/PRODUCTION","OFFICIALS BUTTERY","STELLA ON THE HILL","PIMMS ON THE HILL","RENSHAW","KITCHEN 1 - SUITE 1","KITCHEN 2 - SUITES 2 & 3","KITCHEN 3 - SUITES 4 & 5 & 6","KITCHEN 4 - SUITES 7 & 8","KITCHEN 5 - SUITES 9 & 10"],"items":[{"name":"Staff Dessert Plate","cat":"TAKEAWAY CONTAINERS"},{"name":"Staff Main Plate","cat":"TAKEAWAY CONTAINERS"},{"name":"Staff Bowl","cat":"TAKEAWAY CONTAINERS"},{"name":"Square Plate for Hampers","cat":"TAKEAWAY CONTAINERS"},{"name":"Small Tray Kraft","cat":"TAKEAWAY CONTAINERS"},{"name":"Large Open Kraft Tray","cat":"TAKEAWAY CONTAINERS"},{"name":"Food Takeaway Sealed Box","cat":"TAKEAWAY CONTAINERS"},{"name":"Huhtamaki Box","cat":"TAKEAWAY CONTAINERS"},{"name":"Small 12oz Salad Bowl","cat":"TAKEAWAY CONTAINERS"},{"name":"Large 24oz Salad Bowl","cat":"TAKEAWAY CONTAINERS"},{"name":"Generic Salad Bowl Lid","cat":"TAKEAWAY CONTAINERS"},{"name":"Strawberry Box","cat":"TAKEAWAY CONTAINERS"},{"name":"10\" Pizza Box","cat":"TAKEAWAY CONTAINERS"},{"name":"14\" Pizza Box","cat":"TAKEAWAY CONTAINERS"},{"name":"Cup Carrier (1 x 180)","cat":"TAKEAWAY CONTAINERS"},{"name":"Cup Carrier (1 x 420)","cat":"TAKEAWAY CONTAINERS"},{"name":"1oz Pot","cat":"TAKEAWAY CONTAINERS"},{"name":"1oz Lid","cat":"TAKEAWAY CONTAINERS"},{"name":"2oz Pot","cat":"TAKEAWAY CONTAINERS"},{"name":"2oz Pot Lid","cat":"TAKEAWAY CONTAINERS"},{"name":"Plain Ice Cream Tub White","cat":"TAKEAWAY CONTAINERS"},{"name":"Clear Plastic Pot - Salad & Eton","cat":"TAKEAWAY CONTAINERS"},{"name":"Clear Plastic Pot - LID","cat":"TAKEAWAY CONTAINERS"},{"name":"Burger Wraps/Foils","cat":"TAKEAWAY CONTAINERS"},{"name":"Large Pine Wood Cup","cat":"TAKEAWAY CONTAINERS"},{"name":"Pine Wood Cup for KP only","cat":"TAKEAWAY CONTAINERS"},{"name":"12oz Soup Pot","cat":"TAKEAWAY CONTAINERS"},{"name":"12oz Soup Lid","cat":"TAKEAWAY CONTAINERS"},{"name":"1300ml Fusion Bowl","cat":"TAKEAWAY CONTAINERS"},{"name":"Fusion Bowl Lid","cat":"TAKEAWAY CONTAINERS"},{"name":"750ml Bowl","cat":"TAKEAWAY CONTAINERS"},{"name":"Anchovy Tins","cat":"TAKEAWAY CONTAINERS"},{"name":"Chip Bag","cat":"TAKEAWAY CONTAINERS"},{"name":"Wooden Knife","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Wooden Fork","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Wooden Spoon","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Ice Cream Spoon","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"6in1 Service Pack","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Chopsticks","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Coffee Stirrer","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Tennis Ball Skewer - 100mm","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"9\" Skewer (Lobster Skewers)","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Red and White Straws","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Smoothie and Slushy","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Purple Straws","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Cocktail Sticks","cat":"CUTLERY, STIRRERS, SKEWERS, STRAWS & TOOTHPICKS"},{"name":"Public Napkin Medium","cat":"NAPKINS"},{"name":"Cocktail Napkin Small","cat":"NAPKINS"},{"name":"Stripe Napkin Hospitality","cat":"NAPKINS"},{"name":"Day to Day","cat":"NAPKINS"},{"name":"Members/Obligatory Logo Napkin","cat":"NAPKINS"},{"name":"Large Silicone White Paper","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Small Square Brown Paper","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"10'' Pizza G/Proof Lining","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"14'' Pizza G/Proof Lining","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Treehouse Greaseproof","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Food Box Parchment","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Natural Baking Parchment","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Large Cling Film","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Foil","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Sausage and Pastie Bag","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Medium Brown Bag","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Bin Bags","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Clear Pallet Wrap","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"Black Pallet Wrap","cat":"FILM, WRAP & REFUSE SACKS"},{"name":"1/2 Size Deep Foil Trays","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"1/2 Size Deep Foil Tray Lid","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Full Size Foil Trays","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Full Size Foil Lids","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Piping Bags Roll x 100","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Blue Hair Net","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"White Skull Cap","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"200x250mm Vacuum Pouch","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"300x350mm Vacuum Pouch","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"350x450mm Vacuum Pouch","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Disposable Apron","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Lemon Wraps - Royal Room","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"Chefs Muslin Roll","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"4 Ltr Ice Cream Container","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"2 Ltr Ice Cream Container","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"2/4 Ltr Ice Cream Container Lid","cat":"FOILS, PIPING BAGS, HAIR NETS, VACPAC & APRONS"},{"name":"10 Litre Coffee Filters","cat":"FILTERS"},{"name":"20 Litre Coffee Filters","cat":"FILTERS"},{"name":"40 Litre Coffee Filters","cat":"FILTERS"},{"name":"Pour and Serve Filters","cat":"FILTERS"},{"name":"Blue Roll","cat":"CLEANING"},{"name":"Portable Blue Roll Dispenser","cat":"CLEANING"},{"name":"Green Scourers","cat":"CLEANING"},{"name":"Green Jay Cloths","cat":"CLEANING"},{"name":"Blue Jay Cloths","cat":"CLEANING"},{"name":"Red Jay Cloths","cat":"CLEANING"},{"name":"Yellow Jay Cloths","cat":"CLEANING"},{"name":"Blue Gloves Medium","cat":"CLEANING"},{"name":"Blue Gloves Large","cat":"CLEANING"},{"name":"Blue XL Gloves","cat":"CLEANING"},{"name":"Washing Up Gloves Large","cat":"CLEANING"},{"name":"Washing Up Yellow Gloves Medium","cat":"CLEANING"},{"name":"Black Gauntlet Gloves","cat":"CLEANING"},{"name":"Broom Head","cat":"CLEANING"},{"name":"Mop Head","cat":"CLEANING"},{"name":"Kentucky Mop Head","cat":"CLEANING"},{"name":"Mop / Brush Handle","cat":"CLEANING"},{"name":"Squeegee","cat":"CLEANING"},{"name":"Squeegee Handle","cat":"CLEANING"},{"name":"Blue Bucket and Wringer","cat":"CLEANING"},{"name":"Dustpan and Brush","cat":"CLEANING"},{"name":"Wet Floor Sign","cat":"CLEANING"},{"name":"Oasis Pro 20 Spray Bottle","cat":"CLEANING"},{"name":"Trigger for Spray Bottles (12 x 650ml) [P10381]","cat":"CLEANING"},{"name":"EL10 Spray Bottles","cat":"CLEANING"},{"name":"Pelican Pump - Aseptopol","cat":"CLEANING"},{"name":"Trigger for Spray Bottles (12 x 650ml) [P09354]","cat":"CLEANING"},{"name":"Small Green First Aid Box (10p)","cat":"FIRST AID"},{"name":"Medium Green First Aid Box (20p)","cat":"FIRST AID"},{"name":"Large Green First Aid Box (50p)","cat":"FIRST AID"},{"name":"Blue Plasters","cat":"FIRST AID"},{"name":"Face Mask","cat":"FIRST AID"},{"name":"Goggles","cat":"FIRST AID"},{"name":"Solid Dishwasher Detergent","cat":"CHEMICAL"},{"name":"Liquid Dishwasher Detergent","cat":"CHEMICAL"},{"name":"Rinse Aid 5 Litre","cat":"CHEMICAL"},{"name":"Rinse Aid 20 Litre","cat":"CHEMICAL"},{"name":"Glasswasher Detergent","cat":"CHEMICAL"},{"name":"Glasswasher Rinse Aid","cat":"CHEMICAL"},{"name":"Degreaser/Floor Cleaner","cat":"CHEMICAL"},{"name":"Sanitiser","cat":"CHEMICAL"},{"name":"Washing Up Liquid/Sanitiser","cat":"CHEMICAL"},{"name":"Oven Cleaner","cat":"CHEMICAL"},{"name":"Granular Salt","cat":"CHEMICAL"},{"name":"Dishwasher Salt Tablets","cat":"CHEMICAL"},{"name":"Coffee De-Stainer","cat":"CHEMICAL"},{"name":"Probe Wipes","cat":"CHEMICAL"},{"name":"Hand Cream","cat":"CHEMICAL"},{"name":"Hand Soap","cat":"CHEMICAL"},{"name":"Hand Sanitiser","cat":"CHEMICAL"},{"name":"Convotherm Cleaner","cat":"CHEMICAL"},{"name":"Convotherm Rinse","cat":"CHEMICAL"},{"name":"Eversys Cleaning Balls","cat":"CHEMICAL"},{"name":"Eversys Milk Cleaning Fluid 1Ltr","cat":"CHEMICAL"},{"name":"Franke Cleaning Tablets","cat":"CHEMICAL"},{"name":"Franke Milk Cleaner Fluid","cat":"CHEMICAL"},{"name":"Franke Foam Master Milk Cleaner","cat":"CHEMICAL"},{"name":"Oven Cleaner for Rational Ovens (1 x 100)","cat":"CHEMICAL"},{"name":"Oven Rinse for Rational Ovens","cat":"CHEMICAL"},{"name":"Oven Cleaner for Rational Ovens (1 x 150)","cat":"CHEMICAL"},{"name":"Food Date Labels","cat":"LABELS"},{"name":"Blue Temperature Labels","cat":"LABELS"}]};
+Reading the insights is public. Anything that costs money (scanning) or
+changes data (saving config, logging a record, editing the Checks pile) is
+gated by a shared passcode (WRITE_TOKEN). Leave WRITE_TOKEN blank to open
+those up too — not recommended while the app is public.
+"""
 
-const C = {
-  paper:"#f4f1ea", panel:"#fff", ink:"#191c1f", steel:"#5b6670", line:"#d9d4c7",
-  amber:"#d98a1f", amberSoft:"#fbeccd", go:"#2f8f63", goSoft:"#dcefe4",
-  alert:"#c4452f", alertSoft:"#f6ddd6",
-};
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-const todayISO = () => new Date().toISOString().slice(0,10);
-const TOKEN_KEY = "klomu_token";
-const getToken = () => localStorage.getItem(TOKEN_KEY) || "";
-const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+import os
+import re
+import json
+import uuid
+import base64
+import difflib
+import sqlite3
+from pathlib import Path
+from datetime import datetime, timezone
 
-/* selectable units (no prices) */
-const UNITS = ["box","sleeve","packet","roll","pack","bag","each"];
-const plural = (u,n)=> Number(n)===1 ? u : (u==="box"?"boxes": u==="each"?"each": u+"s");
+from fastapi import FastAPI, UploadFile, File, HTTPException, Header
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from anthropic import Anthropic
 
-/* ---------- icons ---------- */
-const I = ({d, size=20, color="currentColor", fill="none", w=2}) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
-       strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
-);
-const IconCamera = (p)=> <I {...p} d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>} />;
-const IconScan  = (p)=> <I {...p} d={<><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12"/></>} />;
-const IconList  = (p)=> <I {...p} d={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} />;
-const IconAlert = (p)=> <I {...p} d={<><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
-const IconGear  = (p)=> <I {...p} d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />;
-const IconCheck = (p)=> <I {...p} d={<polyline points="20 6 9 17 4 12"/>} />;
-const IconPkg   = (p)=> <I {...p} d={<><path d="M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>} />;
-const IconSearch= (p)=> <I {...p} d={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />;
+# ----------------------------------------------------------------------------
+# Configuration (all from environment variables on Render)
+# ----------------------------------------------------------------------------
+DATA_DIR = Path(os.environ.get("DATA_DIR", "./data"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "orderlog.db"
 
-/* ---------- API ---------- */
-async function api(path, { method="GET", body, isForm=false } = {}) {
-  const headers = {};
-  const opts = { method, headers };
-  if (method !== "GET") headers["X-App-Token"] = getToken();
-  if (body && !isForm) { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
-  if (body && isForm) opts.body = body;
-  const res = await fetch(path, opts);
-  if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
-  if (!res.ok) { let msg="Something went wrong."; try{ msg=(await res.json()).detail||msg; }catch{} throw new Error(msg); }
-  return res.json();
-}
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+WRITE_TOKEN = os.environ.get("WRITE_TOKEN", "")          # staff passcode for writes
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
-/* ---------- image resize ---------- */
-function fileToDataUrl(file, maxDim=1100, quality=0.62){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onerror=()=>reject(new Error("Could not read the photo."));
-    reader.onload=()=>{
-      const img=new Image();
-      img.onerror=()=>reject(new Error("Could not load the photo."));
-      img.onload=()=>{
-        let {width,height}=img; const s=Math.min(1,maxDim/Math.max(width,height));
-        width=Math.round(width*s); height=Math.round(height*s);
-        const cv=document.createElement("canvas"); cv.width=width; cv.height=height;
-        cv.getContext("2d").drawImage(img,0,0,width,height);
-        resolve(cv.toDataURL("image/jpeg",quality));
-      };
-      img.src=reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-const dataUrlToBlob = (u) => fetch(u).then(r=>r.blob());
+client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
-/* teach the app a correction (slang/shorthand -> real name); server ignores no-ops */
-async function learn(kind, raw, resolved){
-  if(!raw || !resolved) return;
-  try{ await api("/api/alias",{method:"POST",body:{kind,raw,resolved}}); }catch{}
-}
+app = FastAPI(title="Klomu Order Log")
 
-/* ============================================================ */
-function App(){
-  const [tab,setTab]=useState("scan");
-  const [config,setConfig]=useState({kitchens:[],items:[]});
-  const [records,setRecords]=useState([]);
-  const [unsuccessful,setUnsuccessful]=useState([]);
-  const [loaded,setLoaded]=useState(false);
 
-  const refresh = useCallback(async ()=>{
-    const [c,r,u]=await Promise.all([api("/api/config"),api("/api/records"),api("/api/unsuccessful")]);
-    setConfig(c); setRecords(r); setUnsuccessful(u); setLoaded(true);
-  },[]);
-  useEffect(()=>{ refresh().catch(()=>setLoaded(true)); },[refresh]);
+# ----------------------------------------------------------------------------
+# Database
+# ----------------------------------------------------------------------------
+def db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
 
-  const notConfigured = (config.items||[]).length===0;
 
-  if(!loaded) return <div style={{display:"flex",height:"100%",alignItems:"center",justifyContent:"center",color:C.steel}}><IconScan size={28} color={C.steel} className="spin"/></div>;
+def init_db():
+    with db() as conn:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS config (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                kitchens TEXT NOT NULL DEFAULT '[]',
+                items    TEXT NOT NULL DEFAULT '[]'
+            );
+            INSERT OR IGNORE INTO config (id, kitchens, items) VALUES (1, '[]', '[]');
 
-  return (
-    <React.Fragment>
-      <Header records={records} unsuccessful={unsuccessful}/>
-      <div style={{flex:1,overflowY:"auto"}}>
-        {tab==="scan" && <ScanView notConfigured={notConfigured} onChanged={refresh} goSetup={()=>setTab("setup")}/>}
-        {tab==="day" && <DayView records={records}/>}
-        {tab==="checks" && <ChecksView unsuccessful={unsuccessful} onChanged={refresh}/>}
-        {tab==="setup" && <SetupView config={config} onChanged={refresh}/>}
-      </div>
-      <TabBar tab={tab} setTab={setTab} checkCount={unsuccessful.length}/>
-    </React.Fragment>
-  );
-}
+            CREATE TABLE IF NOT EXISTS records (
+                id         TEXT PRIMARY KEY,
+                date       TEXT,
+                kitchen    TEXT,
+                items      TEXT NOT NULL,
+                source     TEXT,
+                created_at TEXT
+            );
 
-/* ---------- header ---------- */
-function Header({records,unsuccessful}){
-  const units = records.reduce((s,r)=>s+r.items.reduce((a,i)=>a+(Number(i.qty)||0),0),0);
-  return (
-    <div style={{background:C.ink,color:C.paper,padding:"14px 18px 16px"}}>
-      <div style={{display:"flex",alignItems:"center",gap:9}}>
-        <IconPkg size={18} color={C.amber}/>
-        <span className="mono" style={{fontSize:12,letterSpacing:2,color:C.amber}}>KLOMU · DISPOSABLES</span>
-      </div>
-      <div style={{display:"flex",gap:26,marginTop:12}}>
-        <Stat n={records.length} label="sheets logged"/>
-        <Stat n={units} label="units out"/>
-        <Stat n={unsuccessful.length} label="checks" warn={unsuccessful.length>0}/>
-      </div>
-    </div>
-  );
-}
-const Stat=({n,label,warn})=>(
-  <div>
-    <div className="mono" style={{fontSize:24,fontWeight:700,lineHeight:1.1,color:warn?C.amber:C.paper}}>{n}</div>
-    <div style={{fontSize:10,letterSpacing:.4,color:"#9aa3ab",marginTop:4,textTransform:"uppercase"}}>{label}</div>
-  </div>
-);
+            CREATE TABLE IF NOT EXISTS unsuccessful (
+                id         TEXT PRIMARY KEY,
+                reason     TEXT,
+                draft      TEXT,
+                image      TEXT,
+                created_at TEXT
+            );
 
-/* ---------- searchable picker ---------- */
-function SearchSelect({value,onChange,options,placeholder,bad}){
-  const [open,setOpen]=useState(false);
-  const [q,setQ]=useState("");
-  const toks=q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const filtered = !toks.length ? options : options.filter(o=>{ const lo=o.toLowerCase(); return toks.every(t=>lo.includes(t)); });
-  return (
-    <div>
-      <button onClick={()=>{setOpen(!open);setQ("");}} style={{
-        ...inp,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,cursor:"pointer",
-        borderColor:(bad||!value)?C.alert:(open?C.amber:C.line), color:value?C.ink:C.alert, fontWeight:value?600:500}}>
-        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value||placeholder}</span>
-        <span style={{color:C.steel,fontSize:11,flexShrink:0}}>{open?"▲":"▼"}</span>
-      </button>
-      {open && (
-        <div style={{marginTop:6,border:`1px solid ${C.line}`,borderRadius:10,overflow:"hidden",background:"#fff"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderBottom:`1px solid ${C.line}`}}>
-            <IconSearch size={15} color={C.steel}/>
-            <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Type to search…"
-              style={{border:"none",outline:"none",flex:1,fontSize:14.5,background:"transparent"}}/>
-            {q && <button onClick={()=>setQ("")} style={{...iconBtn,padding:2}}>✕</button>}
-          </div>
-          <div style={{maxHeight:240,overflowY:"auto"}}>
-            {filtered.length===0 && <div style={{padding:"12px 12px",fontSize:13,color:C.steel}}>No matches</div>}
-            {filtered.slice(0,80).map(o=>(
-              <button key={o} onClick={()=>{onChange(o);setOpen(false);setQ("");}} style={{
-                display:"block",width:"100%",textAlign:"left",padding:"10px 12px",border:"none",cursor:"pointer",
-                borderBottom:`1px solid ${C.paper}`,fontSize:13.5,
-                background:o===value?C.amberSoft:"#fff",color:C.ink,fontWeight:o===value?700:400}}>{o}</button>
-            ))}
-            {filtered.length>80 && <div style={{padding:"9px 12px",fontSize:11.5,color:C.steel}}>Keep typing to narrow {filtered.length} matches…</div>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+            CREATE TABLE IF NOT EXISTS aliases (
+                id         TEXT PRIMARY KEY,
+                kind       TEXT NOT NULL,
+                raw_norm   TEXT NOT NULL,
+                raw        TEXT,
+                resolved   TEXT NOT NULL,
+                count      INTEGER DEFAULT 1,
+                updated_at TEXT,
+                UNIQUE(kind, raw_norm)
+            );
+            """
+        )
 
-/* ---------- line row ---------- */
-function UnitPicker({unit,onChange}){
-  return (
-    <div style={{position:"relative"}}>
-      <select value={unit} onChange={e=>onChange(e.target.value)} style={{...inp,appearance:"none",WebkitAppearance:"none",width:110,padding:"8px 26px 8px 11px",fontWeight:700,fontSize:13,textTransform:"capitalize",cursor:"pointer"}}>
-        {UNITS.map(u=><option key={u} value={u}>{u}</option>)}
-      </select>
-      <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:C.steel,fontSize:10}}>▼</span>
-    </div>
-  );
-}
-function ItemLine({line,onPatch,onRemove}){
-  return (
-    <div style={{marginBottom:10,paddingBottom:10,borderBottom:`1px dashed ${C.line}`}}>
-      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-        <div style={{flex:1}}><SearchSelect value={line.name} onChange={v=>onPatch({name:v})} options={SEED.items.map(i=>i.name)} placeholder="— tap to search items —" bad={!line.name}/></div>
-        <button onClick={onRemove} style={{...iconBtn,marginTop:8}}>✕</button>
-      </div>
-      {line.raw && line.name!==line.raw && <div className="mono" style={{fontSize:10.5,color:line.name?C.steel:C.alert,margin:"3px 0"}}>read: "{line.raw}"</div>}
-      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:6}}>
-        <UnitPicker unit={line.unit} onChange={v=>onPatch({unit:v})}/>
-        <input type="number" min="0" inputMode="numeric" value={line.qty} onChange={e=>onPatch({qty:Number(e.target.value)})} style={{...inp,width:72,textAlign:"center",padding:"8px 4px"}}/>
-        <span style={{fontSize:12.5,color:C.steel}}>{plural(line.unit,line.qty)}</span>
-      </div>
-    </div>
-  );
-}
 
-/* ---------- scan ---------- */
-function ScanView({notConfigured,onChanged,goSetup}){
-  const [stage,setStage]=useState("idle");
-  const [dataUrl,setDataUrl]=useState(null);
-  const [draft,setDraft]=useState(null);
-  const [err,setErr]=useState("");
-  const fileRef=useRef(null);
-  const reset=()=>{setStage("idle");setDataUrl(null);setDraft(null);setErr("");};
+init_db()
 
-  const onPick=async(e)=>{
-    const file=e.target.files?.[0]; e.target.value="";
-    if(!file) return;
-    if(!getToken()){ if(!promptPasscode()) return; }
-    setStage("reading"); setErr("");
-    try{
-      const url=await fileToDataUrl(file); setDataUrl(url);
-      const blob=await dataUrlToBlob(url);
-      const fd=new FormData(); fd.append("file",blob,"sheet.jpg");
-      const result=await api("/api/scan",{method:"POST",body:fd,isForm:true});
-      setDraft({
-        kitchen:result?.kitchen?.matched||"", kitchenRaw:result?.kitchen?.raw||"",
-        date:result?.date?.value||"", dateRaw:result?.date?.raw||"",
-        items:(result?.items||[]).map(it=>({id:uid(),name:it.matched||"",raw:it.raw||"",unit:"box",qty:Number(it.quantity)||0})),
-      });
-      setStage("review");
-    }catch(ex){
-      if(ex.code===401){ setStage("idle"); alert("That passcode wasn't right. Set it again in Setup."); return; }
-      setErr(ex.message||"Something went wrong."); setStage("error");
-    }
-  };
 
-  if(notConfigured) return (
-    <Empty icon={<IconGear size={30} color={C.steel}/>} title="Load the catalogue first"
-      body="Go to Setup and load the Championship catalogue (locations and items) before scanning."
-      action={<PrimaryBtn onClick={goSetup}>Go to Setup</PrimaryBtn>}/>
-  );
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
 
-  if(stage==="review"&&draft) return (
-    <ReviewCard draft={draft} setDraft={setDraft} dataUrl={dataUrl} onDone={()=>{onChanged();reset();}} onCancel={reset}/>
-  );
 
-  return (
-    <div style={{padding:18}}>
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onPick} style={{display:"none"}}/>
-      <button onClick={()=>stage!=="reading"&&fileRef.current?.click()} disabled={stage==="reading"}
-        style={{width:"100%",aspectRatio:"4 / 3",borderRadius:16,border:`2px dashed ${C.amber}`,background:stage==="reading"?C.amberSoft:C.panel,color:C.ink,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
-        {stage==="reading"?(
-          <React.Fragment><IconScan size={40} color={C.amber} className="spin"/><span className="mono" style={{fontSize:13,color:C.steel}}>Reading the sheet…</span></React.Fragment>
-        ):(
-          <React.Fragment>
-            <div style={{width:74,height:74,borderRadius:"50%",background:C.amber,display:"flex",alignItems:"center",justifyContent:"center"}}><IconCamera size={34} color="#fff"/></div>
-            <span style={{fontWeight:700,fontSize:17}}>Photograph an order sheet</span>
-            <span style={{fontSize:12.5,color:C.steel}}>Lay it flat, fill the frame, keep the date visible</span>
-          </React.Fragment>
-        )}
-      </button>
-      {stage==="error" && (
-        <div style={{marginTop:16,background:C.alertSoft,border:`1px solid ${C.alert}`,borderRadius:12,padding:14}}>
-          <div style={{display:"flex",gap:9,color:C.alert,fontWeight:700,fontSize:14,alignItems:"center"}}><IconAlert size={18} color={C.alert}/> Couldn't read that one</div>
-          <p style={{margin:"8px 0 12px",fontSize:13}}>{err}</p>
-          <div style={{display:"flex",gap:10}}>
-            <PrimaryBtn onClick={()=>fileRef.current?.click()}>Try again</PrimaryBtn>
-            {dataUrl && <GhostBtn onClick={async()=>{ await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason:"Reader could not parse the sheet",draft:null,image:dataUrl}}); onChanged(); reset(); }}>Send to Checks</GhostBtn>}
-          </div>
-        </div>
-      )}
-      <ProcessNote/>
-    </div>
-  );
-}
+def alias_map(kind):
+    """{normalized raw -> resolved name} of learned corrections for a kind."""
+    with db() as conn:
+        rows = conn.execute("SELECT raw_norm, resolved FROM aliases WHERE kind = ?", (kind,)).fetchall()
+    return {r["raw_norm"]: r["resolved"] for r in rows}
 
-function ProcessNote(){
-  const rows=[["1","Kitchen","matched to your location list, or flagged"],
-    ["2","Items","matched and tallied — pick the unit per line"],
-    ["3","Date","files the order under the right day; no date = check"]];
-  return (
-    <div style={{marginTop:22,borderTop:`1px solid ${C.line}`,paddingTop:16}}>
-      {rows.map(([n,t,d])=>(
-        <div key={n} style={{display:"flex",gap:12,marginBottom:12}}>
-          <div className="mono" style={{fontSize:13,fontWeight:700,color:C.amber,width:16}}>{n}</div>
-          <div><div style={{fontSize:13.5,fontWeight:700}}>{t}</div><div style={{fontSize:12.5,color:C.steel}}>{d}</div></div>
-        </div>
-      ))}
-      <p style={{fontSize:11.5,color:C.steel,marginTop:4}}>Every scan is shown to you before it's logged, so nothing is committed without a quick check.</p>
-    </div>
-  );
-}
 
-/* ---------- review card ---------- */
-function ReviewCard({draft,setDraft,dataUrl,onDone,onCancel}){
-  const [busy,setBusy]=useState(false);
-  const setField=(k,v)=>setDraft({...draft,[k]:v});
-  const patch=(id,p)=>setDraft({...draft,items:draft.items.map(i=>i.id===id?{...i,...p}:i)});
-  const removeItem=(id)=>setDraft({...draft,items:draft.items.filter(i=>i.id!==id)});
-  const addItem=()=>setDraft({...draft,items:[...draft.items,{id:uid(),name:"",raw:"",unit:"box",qty:1}]});
+# ----------------------------------------------------------------------------
+# Auth: writes require the shared passcode (if one is set)
+# ----------------------------------------------------------------------------
+def require_write(x_app_token: str = Header(default="")):
+    if WRITE_TOKEN and x_app_token != WRITE_TOKEN:
+        raise HTTPException(status_code=401, detail="Enter the staff passcode to do that.")
 
-  const kitchenBad=!draft.kitchen, dateBad=!draft.date;
-  const itemBad=draft.items.some(i=>!i.name||!i.qty);
-  const blocking=kitchenBad||dateBad||itemBad||draft.items.length===0;
 
-  const build=(list)=>list.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:Number(i.qty),unit:i.unit}));
+# ----------------------------------------------------------------------------
+# Claude vision: read a disposables order sheet
+# ----------------------------------------------------------------------------
+def build_prompt(kitchens, items):
+    kitchen_list = "; ".join(kitchens) if kitchens else "(none configured)"
+    item_list = "; ".join(items) if items else "(none configured)"
+    return (
+        "You are reading a warehouse order sheet for DISPOSABLE CATERING SUPPLIES "
+        "from a photo. Staff hand in these sheets to collect stock. Typical items are "
+        "disposable plates, napkins / serviettes, cutlery (forks, knives, spoons, sporks), "
+        "cups, lids, straws, food containers and clamshells, foil, cling film, bin bags and gloves.\n\n"
+        f"VALID KITCHENS: {kitchen_list}\n"
+        f"VALID ITEMS: {item_list}\n\n"
+        "Read the sheet and extract:\n"
+        "- kitchen: the kitchen / location name written on the sheet.\n"
+        "- date: the date, usually in the bottom-right corner.\n"
+        "- items: every line item with its quantity as a number. Quantities are often "
+        "written in packs, cases, sleeves, boxes or rolls (e.g. \"Napkins x3 cases\"). "
+        "Record the number exactly as written; the unit is part of the valid item name, "
+        "so match to the closest valid entry and put the count in \"quantity\".\n\n"
+        "For the kitchen and for each item, set \"matched\" to the EXACT valid entry from "
+        "the lists above (copied character for character). Match on the meaningful words, "
+        "IGNORING case, punctuation, and a leading \"the\" — e.g. \"Hill Larder\", \"hill larder\" "
+        "and \"THE HILL LARDER\" are the SAME entry. Allow for handwriting, abbreviations and "
+        "minor typos. When two entries are close, choose the one sharing the most words with what "
+        "is written. Only use null if nothing on the list is plausibly the same thing. Prefer "
+        "recommending the closest valid entry over null.\n\n"
+        "Return ONLY a JSON object, no markdown fences, no commentary:\n"
+        '{"kitchen":{"raw":"<text seen>","matched":"<valid kitchen or null>"},'
+        '"date":{"raw":"<text seen>","value":"<YYYY-MM-DD or null>"},'
+        '"items":[{"raw":"<text seen>","matched":"<valid item or null>","quantity":<number>}]}'
+    )
 
-  const commit=async()=>{
-    setBusy(true);
-    try{
-      await api("/api/records",{method:"POST",body:{id:uid(),dateISO:draft.date,kitchen:draft.kitchen,items:build(draft.items),source:"scan"}});
-      learn("kitchen", draft.kitchenRaw, draft.kitchen);
-      draft.items.forEach(i=>{ if(i.name) learn("item", i.raw, i.name); });
-      onDone();
-    }
-    catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
-  };
-  const toChecks=async()=>{
-    setBusy(true);
-    const reason=[kitchenBad&&"kitchen not recognised",dateBad&&"no readable date",itemBad&&"unmatched items"].filter(Boolean).join(", ")||"sent for manual check";
-    try{ await api("/api/unsuccessful",{method:"POST",body:{id:uid(),reason,draft,image:dataUrl}}); onDone(); }
-    catch(ex){ alert(ex.message); setBusy(false); }
-  };
 
-  return (
-    <div style={{padding:18}}>
-      <div style={{background:C.panel,borderRadius:14,border:`1px solid ${C.line}`}}>
-        <div style={{background:blocking?C.amber:C.go,color:"#fff",padding:"9px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderTopLeftRadius:14,borderTopRightRadius:14}}>
-          <span className="mono" style={{fontSize:12,letterSpacing:2,fontWeight:700}}>{blocking?"NEEDS A CHECK":"READY TO LOG"}</span>
-          {dataUrl && <img src={dataUrl} alt="" style={{height:30,borderRadius:4,border:"1px solid rgba(255,255,255,.5)"}}/>}
-        </div>
-        <div style={{padding:16}}>
-          <FieldRow label="Kitchen" bad={kitchenBad} hint={draft.kitchenRaw&&`read: "${draft.kitchenRaw}"`}>
-            <SearchSelect value={draft.kitchen} onChange={v=>setField("kitchen",v)} options={SEED.kitchens} placeholder="— tap to search locations —"/>
-          </FieldRow>
-          <FieldRow label="Date" bad={dateBad} hint={draft.dateRaw&&`read: "${draft.dateRaw}"`}>
-            <input type="date" value={draft.date} onChange={e=>setField("date",e.target.value)} style={{...inp,borderColor:dateBad?C.alert:C.line}}/>
-          </FieldRow>
-          <div style={{margin:"14px 0 8px",fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase"}}>Items</div>
-          {draft.items.map(it=><ItemLine key={it.id} line={it} onPatch={p=>patch(it.id,p)} onRemove={()=>removeItem(it.id)}/>)}
-          <button onClick={addItem} style={{...ghost,width:"100%",marginTop:4,fontSize:13}}>+ Add a line</button>
-        </div>
-      </div>
-      {blocking && <p style={{fontSize:12,color:C.amber,margin:"12px 2px 0",display:"flex",gap:7,alignItems:"flex-start"}}><IconAlert size={15} color={C.amber}/> Fill the highlighted fields to log this, or send the whole sheet to Checks.</p>}
-      <div style={{display:"flex",gap:10,marginTop:16}}>
-        <button onClick={commit} disabled={blocking||busy} style={{...primary,flex:1,background:C.go,opacity:(blocking||busy)?.4:1,cursor:(blocking||busy)?"not-allowed":"pointer"}}>✓ Confirm &amp; log</button>
-        <button onClick={toChecks} disabled={busy} style={{...ghost,color:C.alert,borderColor:C.alert}}>To Checks</button>
-      </div>
-      <button onClick={onCancel} disabled={busy} style={txtBtn}>Discard this scan</button>
-    </div>
-  );
-}
+_STOP = {"the", "a", "an", "of", "and", "for", "with", "x", "1", "&"}
 
-/* ---------- day ---------- */
-function DayView({records}){
-  const dates=Array.from(new Set(records.map(r=>r.dateISO).filter(Boolean))).sort().reverse();
-  const [sel,setSel]=useState("all");
-  const scoped=sel==="all"?records:records.filter(r=>r.dateISO===sel);
-  const itemU={}, kitU={};
-  scoped.forEach(r=>r.items.forEach(it=>{
-    const q=Number(it.qty||0), u=it.unit||"box";
-    itemU[it.name]=itemU[it.name]||{}; itemU[it.name][u]=(itemU[it.name][u]||0)+q;
-    kitU[r.kitchen]=(kitU[r.kitchen]||0)+q;
-  }));
-  const itemRows=Object.entries(itemU).map(([n,u])=>[n,u,Object.values(u).reduce((s,v)=>s+v,0)]).sort((a,b)=>b[2]-a[2]);
-  const kitRows=Object.entries(kitU).sort((a,b)=>b[1]-a[1]);
-  const totalUnits=kitRows.reduce((s,[,v])=>s+v,0);
-  const top=kitRows[0]?.[1]||1;
 
-  if(records.length===0) return <Empty icon={<IconList size={30} color={C.steel}/>} title="Nothing logged yet" body="Scanned sheets will be summarised here, grouped by their date."/>;
+def _norm(s):
+    s = (s or "").lower().strip()
+    s = re.sub(r"^the\s+", "", s)
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
 
-  return (
-    <div style={{padding:18}}>
-      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:16}}>
-        <Chip active={sel==="all"} onClick={()=>setSel("all")}>All dates</Chip>
-        {dates.map(d=><Chip key={d} active={sel===d} onClick={()=>setSel(d)}>{fmtDate(d)}</Chip>)}
-      </div>
-      <div style={{display:"flex",gap:12,marginBottom:20}}>
-        <MiniStat n={scoped.length} label="sheets"/>
-        <MiniStat n={itemRows.length} label="items"/>
-        <MiniStat n={totalUnits} label="units"/>
-      </div>
-      <SectionLabel>Top kitchens by volume</SectionLabel>
-      <div style={{marginBottom:22}}>
-        {kitRows.map(([k,v])=>(
-          <div key={k} style={{marginBottom:9}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}><span style={{fontWeight:600}}>{k}</span><span className="mono" style={{color:C.steel}}>{v}</span></div>
-            <div style={{height:7,background:C.line,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.max(4,(v/top)*100)}%`,background:C.amber}}/></div>
-          </div>
-        ))}
-      </div>
-      <SectionLabel>Items used</SectionLabel>
-      <div style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,overflow:"hidden",marginBottom:22}}>
-        {itemRows.map(([name,u],idx)=>(
-          <div key={name} style={{display:"flex",justifyContent:"space-between",padding:"11px 14px",borderBottom:idx<itemRows.length-1?`1px solid ${C.line}`:"none"}}>
-            <span style={{fontSize:13.5,paddingRight:10}}>{name}</span>
-            <span className="mono" style={{fontWeight:700,whiteSpace:"nowrap",color:C.ink}}>{Object.entries(u).map(([un,q])=>`${q} ${un}`).join(" · ")}</span>
-          </div>
-        ))}
-      </div>
-      <PrimaryBtn full onClick={()=>exportExcel(records)}>↓ Export Excel</PrimaryBtn>
-      <button onClick={()=>exportCsv(scoped)} style={txtBtn}>Download CSV of {sel==="all"?"all records":fmtDate(sel)}</button>
-    </div>
-  );
-}
 
-/* ---------- checks ---------- */
-function ChecksView({unsuccessful,onChanged}){
-  if(unsuccessful.length===0) return <Empty icon={<IconCheck size={30} color={C.go}/>} title="All clear" body="Sheets the reader wasn't sure about land here for a human to sort out. None right now."/>;
-  return <div style={{padding:18}}>{unsuccessful.map(u=><CheckCard key={u.id} entry={u} onChanged={onChanged}/>)}</div>;
-}
-function CheckCard({entry,onChanged}){
-  const [open,setOpen]=useState(false);
-  const [busy,setBusy]=useState(false);
-  const seed=entry.draft||{};
-  const [d,setD]=useState({
-    kitchen:seed.kitchen||"", date:seed.date||todayISO(),
-    items:(seed.items&&seed.items.length?seed.items:[{name:"",unit:"box",qty:1}]).map(i=>({id:uid(),name:i.name||"",unit:i.unit||"box",qty:i.qty||1})),
-  });
-  const patch=(id,p)=>setD({...d,items:d.items.map(x=>x.id===id?{...x,...p}:x)});
-  const ready=d.kitchen&&d.date&&d.items.length&&d.items.every(i=>i.name&&i.qty>0);
-  const build=(list)=>list.filter(i=>i.name&&i.qty>0).map(i=>({name:i.name,qty:Number(i.qty),unit:i.unit}));
+def _tokens(s):
+    return [t for t in _norm(s).split() if t and t not in _STOP]
 
-  const resolve=async()=>{
-    setBusy(true);
-    try{
-      await api("/api/records",{method:"POST",body:{id:uid(),dateISO:d.date,kitchen:d.kitchen,items:build(d.items),source:"manual"}});
-      learn("kitchen", (entry.draft&&entry.draft.kitchenRaw)||"", d.kitchen);
-      await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"});
-      onChanged();
-    }
-    catch(ex){ alert(ex.code===401?"Enter the staff passcode in Setup first.":ex.message); setBusy(false); }
-  };
-  const del=async()=>{ if(!confirm("Discard this check? The photo will be deleted too.")) return; setBusy(true); try{ await api(`/api/unsuccessful/${entry.id}`,{method:"DELETE"}); onChanged(); }catch(ex){ alert(ex.message); setBusy(false); } };
 
-  return (
-    <div style={{background:C.panel,border:`1px solid ${C.line}`,borderLeft:`4px solid ${C.alert}`,borderRadius:12,marginBottom:14,overflow:"hidden"}}>
-      <button onClick={()=>setOpen(!open)} style={{width:"100%",textAlign:"left",padding:"13px 15px",background:"none",border:"none",cursor:"pointer"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:13,fontWeight:700,color:C.alert,textTransform:"capitalize"}}>{entry.reason}</span>
-          <span className="mono" style={{fontSize:11,color:C.steel}}>{fmtTime(entry.scannedAt)}</span>
-        </div>
-        <span style={{fontSize:11.5,color:C.steel}}>{open?"Tap to collapse":"Tap to fix or review"}</span>
-      </button>
-      {open && (
-        <div style={{padding:"0 15px 15px"}}>
-          {entry.image && <img src={entry.image} alt="order sheet" style={{width:"100%",borderRadius:8,border:`1px solid ${C.line}`,marginBottom:14}}/>}
-          <FieldRow label="Kitchen" bad={!d.kitchen}><SearchSelect value={d.kitchen} onChange={v=>setD({...d,kitchen:v})} options={SEED.kitchens} placeholder="— tap to search locations —"/></FieldRow>
-          <FieldRow label="Date" bad={!d.date}><input type="date" value={d.date} onChange={e=>setD({...d,date:e.target.value})} style={inp}/></FieldRow>
-          <div style={{fontSize:11,letterSpacing:1,color:C.steel,textTransform:"uppercase",margin:"10px 0 8px",fontWeight:700}}>Items</div>
-          {d.items.map(it=><ItemLine key={it.id} line={it} onPatch={p=>patch(it.id,p)} onRemove={()=>setD({...d,items:d.items.filter(x=>x.id!==it.id)})}/>)}
-          <button onClick={()=>setD({...d,items:[...d.items,{id:uid(),name:"",unit:"box",qty:1}]})} style={{...ghost,width:"100%",fontSize:13,marginTop:2}}>+ Add a line</button>
-          <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button disabled={!ready||busy} onClick={resolve} style={{...primary,flex:1,background:C.go,opacity:(ready&&!busy)?1:.4,cursor:(ready&&!busy)?"pointer":"not-allowed"}}>✓ Log it</button>
-            <button disabled={busy} onClick={del} style={{...ghost,color:C.alert,borderColor:C.alert}}>Delete</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+def best_match(raw, candidates, floor=0.34):
+    """Resolve a messy string to the closest valid entry using word overlap."""
+    if not raw:
+        return None
+    rn = _norm(raw)
+    for c in candidates:
+        if _norm(c) == rn:
+            return c
+    rset = set(_tokens(raw))
+    best, best_score = None, 0.0
+    for c in candidates:
+        cset = set(_tokens(c))
+        if not rset or not cset:
+            continue
+        overlap = len(rset & cset)
+        word_score = overlap / min(len(rset), len(cset))
+        seq = difflib.SequenceMatcher(None, rn, _norm(c)).ratio()
+        score = 0.72 * word_score + 0.28 * seq
+        if score > best_score:
+            best, best_score = c, score
+    return best if best_score >= floor else None
 
-/* ---------- setup ---------- */
-function SetupView({config,onChanged}){
-  const [pass,setPass]=useState(getToken());
-  const [busy,setBusy]=useState(false);
-  const [msg,setMsg]=useState("");
-  const [aliases,setAliases]=useState([]);
-  const loaded=(config.items||[]).length;
 
-  useEffect(()=>{ api("/api/aliases").then(setAliases).catch(()=>{}); },[]);
-  const delAlias=async(id)=>{ try{ await api(`/api/alias/${id}`,{method:"DELETE"}); setAliases(aliases.filter(a=>a.id!==id)); }catch(ex){ alert(ex.message); } };
+def _resolve(parsed, kitchens, item_names, k_alias=None, i_alias=None):
+    """Force kitchen and each item onto a real catalogue entry.
+    Learned aliases (past human corrections) take priority over fresh guessing."""
+    k_alias = k_alias or {}
+    i_alias = i_alias or {}
+    valid_k = set(kitchens)
+    k = parsed.get("kitchen") or {}
+    learned = k_alias.get(_norm(k.get("raw") or k.get("matched")))
+    if learned in valid_k:
+        k["matched"] = learned
+    elif k.get("matched") not in valid_k:
+        k["matched"] = best_match(k.get("matched") or k.get("raw"), kitchens, floor=0.30)
+    parsed["kitchen"] = k
+    valid_i = set(item_names)
+    for it in parsed.get("items") or []:
+        li = i_alias.get(_norm(it.get("raw") or it.get("matched")))
+        if li in valid_i:
+            it["matched"] = li
+        elif it.get("matched") not in valid_i:
+            it["matched"] = best_match(it.get("matched") or it.get("raw"), item_names, floor=0.42)
+    return parsed
 
-  const loadCatalogue=async()=>{
-    setToken(pass.trim()); setBusy(true); setMsg("");
-    try{ await api("/api/config",{method:"PUT",body:{kitchens:SEED.kitchens,items:SEED.items}}); setMsg(`Loaded ${SEED.kitchens.length} locations and ${SEED.items.length} items.`); onChanged(); }
-    catch(ex){ setMsg(ex.code===401?"That passcode wasn't accepted by the server.":ex.message); }
-    setBusy(false);
-  };
 
-  return (
-    <div style={{padding:18}}>
-      <Label>Staff passcode</Label>
-      <p style={{fontSize:12.5,color:C.steel,margin:"0 0 7px"}}>Needed to scan, log, or edit. Viewers see the insights without it.</p>
-      <input type="text" value={pass} onChange={e=>{setPass(e.target.value);setToken(e.target.value.trim());}} placeholder="passcode" style={inp} autoCapitalize="off" autoCorrect="off"/>
+def read_sheet(image_bytes: bytes, media_type: str, kitchens, items, k_alias=None, i_alias=None) -> dict:
+    if client is None:
+        raise HTTPException(status_code=503, detail="The reader is not configured (no API key set).")
+    b64 = base64.standard_b64encode(image_bytes).decode("ascii")
+    try:
+        msg = client.messages.create(
+            model=MODEL,
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {
+                            "type": "base64", "media_type": media_type, "data": b64}},
+                        {"type": "text", "text": build_prompt(kitchens, items)},
+                    ],
+                }
+            ],
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Reader unavailable: {e}")
 
-      <div style={{marginTop:22,padding:16,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12}}>
-        <Label>Championship catalogue</Label>
-        <p style={{fontSize:12.5,color:C.steel,margin:"2px 0 12px"}}>
-          {loaded ? `Loaded: ${config.kitchens.length} locations, ${config.items.length} items.` :
-          "Not loaded yet. This fills in all locations and items from your stock register."}
-        </p>
-        <button onClick={loadCatalogue} disabled={busy} style={{...primary,width:"100%",background:C.amber}}>
-          {busy?"Loading…":(loaded?"Reload catalogue":`Load catalogue (${SEED.kitchens.length} locations · ${SEED.items.length} items)`)}
-        </button>
-        {msg && <p style={{fontSize:12.5,color:msg.includes("Loaded")?C.go:C.alert,marginTop:10,marginBottom:0}}>{msg}</p>}
-      </div>
+    text = "".join(b.text for b in msg.content if b.type == "text").strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1:
+        raise HTTPException(status_code=422, detail="Could not read the sheet clearly.")
+    try:
+        parsed = json.loads(text[start:end + 1])
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="Could not read the sheet clearly.")
+    return _resolve(parsed, kitchens, [i["name"] for i in items] if items and isinstance(items[0], dict) else list(items), k_alias, i_alias)
 
-      {aliases.length>0 && (
-        <div style={{marginTop:18,padding:16,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12}}>
-          <Label>Learned names</Label>
-          <p style={{fontSize:12.5,color:C.steel,margin:"2px 0 10px"}}>Shorthand the app has learned from your corrections. Remove any that are wrong.</p>
-          {aliases.map(a=>(
-            <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderTop:`1px solid ${C.paper}`}}>
-              <span style={{fontSize:12.5,flex:1}}><b>"{a.raw}"</b> <span style={{color:C.steel}}>→ {a.resolved}</span> <span style={{color:C.steel,fontSize:11}}>({a.kind})</span></span>
-              <button onClick={()=>delAlias(a.id)} style={iconBtn}>✕</button>
-            </div>
-          ))}
-        </div>
-      )}
 
-      <div style={{marginTop:18,fontSize:12,color:C.steel,lineHeight:1.55}}>
-        <b>Units.</b> Each line has a unit — Box, Sleeve, Packet, Roll, Pack, Bag or Each. Pick whichever matches how the item was taken and enter the count. Each unit is tallied separately, per item, per kitchen, per day.
-      </div>
-    </div>
-  );
-}
+# ----------------------------------------------------------------------------
+# Models
+# ----------------------------------------------------------------------------
+class ConfigIn(BaseModel):
+    kitchens: list[str] = []
+    items: list[dict] = []
 
-/* ---------- tab bar ---------- */
-function TabBar({tab,setTab,checkCount}){
-  const tabs=[["scan","Scan",IconScan],["day","Day",IconList],["checks","Checks",IconAlert],["setup","Setup",IconGear]];
-  return (
-    <div style={{display:"flex",borderTop:`1px solid ${C.line}`,background:C.panel,paddingBottom:"env(safe-area-inset-bottom)"}}>
-      {tabs.map(([id,label,Icon])=>{
-        const active=tab===id;
-        return (
-          <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"10px 0 11px",background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,color:active?C.ink:C.steel}}>
-            <div style={{position:"relative"}}>
-              <Icon size={21} color={active?C.amber:C.steel}/>
-              {id==="checks"&&checkCount>0 && <span style={{position:"absolute",top:-6,right:-9,background:C.alert,color:"#fff",borderRadius:9,minWidth:16,height:16,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{checkCount}</span>}
-            </div>
-            <span style={{fontSize:11,fontWeight:active?700:500}}>{label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
-/* ---------- shared ---------- */
-function Empty({icon,title,body,action}){
-  return (
-    <div style={{padding:"60px 30px",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-      <div style={{width:64,height:64,borderRadius:"50%",background:C.panel,border:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{icon}</div>
-      <h3 style={{margin:0,fontSize:17}}>{title}</h3>
-      <p style={{margin:0,fontSize:13.5,color:C.steel,maxWidth:280,lineHeight:1.5}}>{body}</p>
-      {action&&<div style={{marginTop:6}}>{action}</div>}
-    </div>
-  );
-}
-const PrimaryBtn=({children,onClick,full,style})=>(<button onClick={onClick} style={{...primary,width:full?"100%":"auto",...style}}>{children}</button>);
-const GhostBtn=({children,onClick,style})=>(<button onClick={onClick} style={{...ghost,...style}}>{children}</button>);
-function FieldRow({label,bad,hint,children}){
-  return (
-    <div style={{marginBottom:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
-        <span style={{fontSize:11,letterSpacing:1,color:bad?C.alert:C.steel,textTransform:"uppercase",fontWeight:700}}>{label}</span>
-        {hint&&<span className="mono" style={{fontSize:10.5,color:C.steel}}>{hint}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-const Chip=({active,onClick,children})=>(<button onClick={onClick} className="mono" style={{flexShrink:0,padding:"7px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,cursor:"pointer",border:`1px solid ${active?C.ink:C.line}`,background:active?C.ink:C.panel,color:active?C.paper:C.steel}}>{children}</button>);
-const MiniStat=({n,label})=>(<div style={{flex:1,background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:"12px 10px"}}><div className="mono" style={{fontSize:22,fontWeight:700}}>{n}</div><div style={{fontSize:10.5,color:C.steel,textTransform:"uppercase",letterSpacing:.4,marginTop:2}}>{label}</div></div>);
-const SectionLabel=({children})=>(<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12.5,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:11}}><span style={{color:C.amber}}>▸</span>{children}</div>);
-const Label=({children,style})=>(<div style={{fontSize:11.5,letterSpacing:1,textTransform:"uppercase",fontWeight:700,marginBottom:7,...style}}>{children}</div>);
+class RecordItem(BaseModel):
+    name: str
+    qty: float
+    unit: str = "box"
+    pieces: float = 0
+    value: float = 0
 
-function promptPasscode(){ const t=prompt("Enter the staff passcode to scan and log:"); if(t){ setToken(t.trim()); return true; } return false; }
 
-/* ---------- export (no prices) ---------- */
-function aggLine(records, keyFn){
-  const m={};
-  records.forEach(r=>r.items.forEach(it=>{
-    const k=keyFn(r,it); if(!m[k]) m[k]={}; const u=it.unit||"box";
-    m[k][u]=(m[k][u]||0)+Number(it.qty||0);
-  }));
-  return m; // key -> {unit: qty}
-}
-function exportExcel(records){
-  const wb=XLSX.utils.book_new();
-  const dates=Array.from(new Set(records.map(r=>r.dateISO).filter(Boolean))).sort();
+class RecordIn(BaseModel):
+    id: str
+    dateISO: str
+    kitchen: str
+    items: list[RecordItem]
+    source: str = "scan"
 
-  const sm=aggLine(records,(r,it)=>it.name);
-  const sRows=[["Item","Unit","Total qty"]];
-  Object.keys(sm).sort().forEach(n=>Object.entries(sm[n]).sort((a,b)=>b[1]-a[1]).forEach(([u,q])=>sRows.push([n,u,q])));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sRows),"Summary");
 
-  const bd=[["Date","Kitchen","Item","Unit","Qty"]];
-  dates.forEach(date=>{
-    const day=records.filter(r=>r.dateISO===date);
-    const kitchens=Array.from(new Set(day.map(r=>r.kitchen))).sort();
-    kitchens.forEach(k=>{
-      const m=aggLine(day.filter(r=>r.kitchen===k),(r,it)=>it.name);
-      let firstRow=true;
-      Object.keys(m).sort().forEach(n=>Object.entries(m[n]).sort((a,b)=>b[1]-a[1]).forEach(([u,q])=>{
-        bd.push([firstRow?fmtDate(date):"", firstRow?k:"", n, u, q]); firstRow=false;
-      }));
-    });
-  });
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(bd),"By kitchen by day");
+class UnsuccessfulIn(BaseModel):
+    id: str
+    reason: str
+    draft: dict | None = None
+    image: str | None = None
 
-  if(dates.length===0) XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["No dated records yet"]]),"Empty");
-  XLSX.writeFile(wb,`klomu-order-log-${todayISO()}.xlsx`);
-}
-function exportCsv(records){
-  const rows=[["Date","Kitchen","Item","Unit","Qty","Source","Logged at"]];
-  records.forEach(r=>r.items.forEach(it=>rows.push([r.dateISO,r.kitchen,it.name,it.unit||"box",it.qty,r.source,r.scannedAt])));
-  const csv=rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob=new Blob([csv],{type:"text/csv"}); const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download=`klomu-order-log-${todayISO()}.csv`; a.click();
-}
 
-/* ---------- styles ---------- */
-const fmtDate=iso=>{try{return new Date(iso+"T00:00:00").toLocaleDateString(undefined,{day:"2-digit",month:"short"});}catch{return iso;}};
-const fmtTime=iso=>{try{return new Date(iso).toLocaleString(undefined,{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"short"});}catch{return"";}};
-const inp={width:"100%",padding:"10px 12px",borderRadius:9,border:`1px solid ${C.line}`,background:"#fff",color:C.ink,fontSize:14.5,outline:"none"};
-const primary={display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px 18px",borderRadius:11,border:"none",background:C.amber,color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer"};
-const ghost={display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,padding:"11px 15px",borderRadius:11,border:`1px solid ${C.line}`,background:"#fff",color:C.ink,fontSize:14,fontWeight:600,cursor:"pointer"};
-const txtBtn={width:"100%",background:"none",border:"none",color:C.steel,fontSize:13,cursor:"pointer",textDecoration:"underline",padding:8,marginTop:12};
-const iconBtn={background:"none",border:"none",cursor:"pointer",padding:6,color:C.steel,fontSize:15,flexShrink:0};
+class AliasIn(BaseModel):
+    kind: str
+    raw: str
+    resolved: str
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-</script>
-<script>
-  window.addEventListener("load", function () {
-    setTimeout(function () {
-      var r = document.getElementById("root");
-      if (r && !r.hasChildNodes()) {
-        r.innerHTML =
-          '<div style="padding:44px 28px;text-align:center;font-family:system-ui;color:#5b6670;max-width:360px;margin:0 auto">' +
-          '<div style="font-size:16px;font-weight:700;color:#191c1f;margin-bottom:8px">Couldn\'t finish loading</div>' +
-          'A required file didn\'t download (usually a brief network blip). ' +
-          '<a href="#" onclick="location.reload();return false" style="color:#d98a1f;font-weight:700">Tap to reload</a>.</div>';
-      }
-    }, 4000);
-  });
-</script>
-</body>
-</html>
+
+# ----------------------------------------------------------------------------
+# API — config
+# ----------------------------------------------------------------------------
+@app.get("/api/config")
+def get_config():
+    with db() as conn:
+        row = conn.execute("SELECT kitchens, items FROM config WHERE id = 1").fetchone()
+    return {"kitchens": json.loads(row["kitchens"]), "items": json.loads(row["items"])}
+
+
+@app.put("/api/config")
+def put_config(cfg: ConfigIn, x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    with db() as conn:
+        conn.execute(
+            "UPDATE config SET kitchens = ?, items = ? WHERE id = 1",
+            (json.dumps(cfg.kitchens), json.dumps([dict(i) for i in cfg.items])),
+        )
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------------------
+# API — learned aliases (slang / shorthand -> real name)
+# ----------------------------------------------------------------------------
+@app.get("/api/aliases")
+def get_aliases():
+    with db() as conn:
+        rows = conn.execute("SELECT id, kind, raw, resolved, count FROM aliases ORDER BY kind, resolved").fetchall()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/alias")
+def add_alias(a: AliasIn, x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    rn = _norm(a.raw)
+    if not rn or not a.resolved or a.kind not in ("kitchen", "item"):
+        return {"ok": False}
+    if _norm(a.resolved) == rn:
+        return {"ok": False}
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO aliases (id, kind, raw_norm, raw, resolved, count, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, 1, ?) "
+            "ON CONFLICT(kind, raw_norm) DO UPDATE SET resolved=excluded.resolved, "
+            "raw=excluded.raw, count=count+1, updated_at=excluded.updated_at",
+            (uuid.uuid4().hex, a.kind, rn, a.raw, a.resolved, now_iso()),
+        )
+    return {"ok": True}
+
+
+@app.delete("/api/alias/{aid}")
+def delete_alias(aid: str, x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    with db() as conn:
+        conn.execute("DELETE FROM aliases WHERE id = ?", (aid,))
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------------------
+# API — scan (costs money; gated)
+# ----------------------------------------------------------------------------
+@app.post("/api/scan")
+async def scan(file: UploadFile = File(...), x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    cfg = get_config()
+    data = await file.read()
+    media_type = file.content_type or "image/jpeg"
+    return read_sheet(data, media_type, cfg["kitchens"], [i["name"] for i in cfg["items"]],
+                      alias_map("kitchen"), alias_map("item"))
+
+
+# ----------------------------------------------------------------------------
+# API — records (read public, write gated)
+# ----------------------------------------------------------------------------
+@app.get("/api/records")
+def get_records(date: str | None = None):
+    q = "SELECT * FROM records"
+    args = ()
+    if date:
+        q += " WHERE date = ?"
+        args = (date,)
+    q += " ORDER BY created_at DESC"
+    with db() as conn:
+        rows = conn.execute(q, args).fetchall()
+    return [
+        {
+            "id": r["id"], "dateISO": r["date"], "kitchen": r["kitchen"],
+            "items": json.loads(r["items"]), "source": r["source"], "scannedAt": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+@app.post("/api/records")
+def add_record(rec: RecordIn, x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    with db() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO records (id, date, kitchen, items, source, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (rec.id, rec.dateISO, rec.kitchen,
+             json.dumps([i.model_dump() for i in rec.items]), rec.source, now_iso()),
+        )
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------------------
+# API — unsuccessful / Checks (read public, write gated)
+# ----------------------------------------------------------------------------
+@app.get("/api/unsuccessful")
+def get_unsuccessful():
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM unsuccessful ORDER BY created_at DESC").fetchall()
+    return [
+        {
+            "id": r["id"], "reason": r["reason"],
+            "draft": json.loads(r["draft"]) if r["draft"] else None,
+            "image": r["image"], "scannedAt": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+@app.post("/api/unsuccessful")
+def add_unsuccessful(u: UnsuccessfulIn, x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    with db() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO unsuccessful (id, reason, draft, image, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (u.id, u.reason, json.dumps(u.draft) if u.draft else None, u.image, now_iso()),
+        )
+    return {"ok": True}
+
+
+@app.delete("/api/unsuccessful/{uid}")
+def delete_unsuccessful(uid: str, x_app_token: str = Header(default="")):
+    require_write(x_app_token)
+    with db() as conn:
+        conn.execute("DELETE FROM unsuccessful WHERE id = ?", (uid,))
+    return {"ok": True}
+
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "reader_configured": client is not None, "writes_protected": bool(WRITE_TOKEN)}
+
+
+# ----------------------------------------------------------------------------
+# Serve the web app (must be mounted LAST so /api routes win)
+# ----------------------------------------------------------------------------
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
