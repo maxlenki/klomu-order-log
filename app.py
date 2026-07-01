@@ -170,6 +170,9 @@ class ConfigIn(BaseModel):
 class RecordItem(BaseModel):
     name: str
     qty: float
+    unit: str = "box"      # "box" or "part"
+    pieces: float = 0      # total individual pieces taken
+    value: float = 0       # GBP value of this line
 
 
 class RecordIn(BaseModel):
@@ -203,7 +206,7 @@ def put_config(cfg: ConfigIn, x_app_token: str = Header(default="")):
     with db() as conn:
         conn.execute(
             "UPDATE config SET kitchens = ?, items = ? WHERE id = 1",
-            (json.dumps(cfg.kitchens), json.dumps([{"name": i.get("name", "")} for i in cfg.items])),
+            (json.dumps(cfg.kitchens), json.dumps([dict(i) for i in cfg.items])),
         )
     return {"ok": True}
 
